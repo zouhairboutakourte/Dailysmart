@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">Daily Smart</string>
+    <string name="home_subtitle">Votre équilibre quotidien et progrès intelligent</string>
+    <string name="nav_home">Accueil</string>
+    <string name="nav_tasks">Tâches</string>
+    <string name="nav_habits">Habitudes</string>
+    <string name="nav_finances">Finances</string>
+    <string name="nav_settings">Paramètres</string>
+</resources>
