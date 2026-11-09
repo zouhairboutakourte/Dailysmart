@@ -22,7 +22,7 @@ jobs:
       - uses: android-actions/setup-android@v3
         with:
           packages: platform-tools
-          accept-android-sdk-licenses: true 
+          accept-android-sdk-licenses: true
 
       - uses: gradle/actions/setup-gradle@v4
         with:
@@ -31,6 +31,14 @@ jobs:
       - name: Compiler l'APK
         working-directory: build_src/DailySmart
         run: gradle assembleDebug --stacktrace
+
+      - name: Upload source for review
+        uses: actions/upload-artifact@v4
+        with:
+          name: DailySmart-Source-Audit
+          path: build_src/DailySmart/
+          if-no-files-found: error
+          retention-days: 7
 
       - uses: actions/upload-artifact@v4
         with:
