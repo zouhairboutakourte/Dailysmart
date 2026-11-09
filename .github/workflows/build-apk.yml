@@ -14,6 +14,9 @@ jobs:
       - name: Dézipper le projet
         run: unzip -o DailySmart-projet.zip -d build_src
 
+      - name: Appliquer les corrections de sécurité
+        run: python3 scripts/apply_safety_fixes.py build_src/DailySmart
+
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
