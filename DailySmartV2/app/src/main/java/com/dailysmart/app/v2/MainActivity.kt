@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.sp
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import java.io.InputStream
 
 private val Navy = Color(0xFF0B1220)
 private val Panel = Color(0xFF151F31)
@@ -58,6 +59,24 @@ fun DailySmartApp() {
     var newTitle by remember { mutableStateOf("") }
     var newAmount by remember { mutableStateOf("") }
     var info by remember { mutableStateOf("Your personal workspace is ready.") }
+    var pendingRestore by remember { mutableStateOf<BackupCodec.Snapshot?>(null) }
+
+    val backupLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
+        if (uri != null) runCatching {
+            val bytes = BackupCodec.encode(tasks, money, habits)
+            context.contentResolver.openOutputStream(uri)?.use { it.write(bytes) }
+                ?: throw IllegalStateException("Could not create backup file.")
+            info = "Backup created successfully."
+        }.onFailure { info = "Backup failed: ${it.localizedMessage}" }
+    }
+    val restoreLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        if (uri != null) runCatching {
+            val bytes = context.contentResolver.openInputStream(uri)?.use { readBackupBounded(it) }
+                ?: throw IllegalStateException("Could not open selected file.")
+            pendingRestore = BackupCodec.decode(bytes)
+            info = "Backup checked. Confirm restore to replace current records."
+        }.onFailure { info = "Restore failed: ${it.localizedMessage}" }
+    }
 
     fun saveTasks() { prefs.edit().putString("tasks", tasks.joinToString("\n") { (if (it.done) "1" else "0") + "|" + encodeStoredText(it.title.replace("\n", " ")) }).apply() }
     fun saveMoney() { prefs.edit().putString("money", money.joinToString("\n") { (if (it.income) "I" else "E") + "|" + it.amount + "|" + encodeStoredText(it.title.replace("\n", " ")) }).apply() }
@@ -102,6 +121,24 @@ fun DailySmartApp() {
     }
 
     MaterialTheme(colorScheme = darkColorScheme(background = Navy, surface = Panel, primary = Accent, onBackground = White, onSurface = White)) {
+        pendingRestore?.let { snapshot ->
+            AlertDialog(
+                onDismissRequest = { pendingRestore = null },
+                title = { Text("Restore DailySmart backup?") },
+                text = { Text("This replaces current tasks, finance records and habits with the backup. Export a backup first if you want to keep the current data.") },
+                confirmButton = {
+                    TextButton(onClick = {
+                        tasks = snapshot.tasks
+                        money = snapshot.money
+                        habits = snapshot.habits
+                        saveTasks(); saveMoney(); saveHabits()
+                        pendingRestore = null
+                        info = "Backup restored successfully."
+                    }) { Text("Restore") }
+                },
+                dismissButton = { TextButton(onClick = { pendingRestore = null }) { Text("Cancel") } }
+            )
+        }
         Scaffold(containerColor = Navy, bottomBar = {
             NavigationBar(containerColor = Panel) {
                 listOf("Assistant", "Finance", "Tasks", "Habits", "Excel", "Settings").forEach { name ->
@@ -237,6 +274,15 @@ fun DailySmartApp() {
                                 Text("Privacy", color = Muted, fontSize = 12.sp)
                                 Text("No ads. No account required. No AI API key is embedded in this APK.", color = White)
                                 Text("Online AI is not connected yet. XLSX finance import/export is available.", color = Accent, fontSize = 12.sp)
+                                Divider(color = Muted.copy(alpha = 0.25f))
+                                Text("Backup & restore", color = Muted, fontSize = 12.sp)
+                                Text("Create a portable copy of tasks, finance records and habits. Restoring replaces current data only after confirmation.", color = White, fontSize = 12.sp)
+                                Button(onClick = { backupLauncher.launch("DailySmart-backup.json") }, modifier = Modifier.fillMaxWidth()) {
+                                    Icon(Icons.Default.Backup, null); Spacer(Modifier.width(8.dp)); Text("Create full backup")
+                                }
+                                OutlinedButton(onClick = { restoreLauncher.launch("application/json") }, modifier = Modifier.fillMaxWidth()) {
+                                    Icon(Icons.Default.Restore, null); Spacer(Modifier.width(8.dp)); Text("Restore from backup")
+                                }
                             }
                         }
                     }
