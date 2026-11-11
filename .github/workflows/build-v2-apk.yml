@@ -1,0 +1,87 @@
+name: Build DailySmart V2 APK
+
+on:
+  push:
+    branches: [dev]
+    paths:
+      - ".github/workflows/build-v2-apk.yml"
+      - "DailySmart-projet.zip"
+      - "scripts/apply_safety_fixes.py"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-v2:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout dev
+        uses: actions/checkout@v4
+
+      - name: Extract native project
+        run: unzip -o DailySmart-projet.zip -d build_src
+
+      - name: Apply reviewed safety fixes
+        run: python3 scripts/apply_safety_fixes.py build_src/DailySmart
+
+      - name: Set isolated V2 application ID
+        working-directory: build_src/DailySmart
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path("app/build.gradle.kts")
+          s = p.read_text()
+          old = 'applicationIdSuffix = ".debug"'
+          new = 'applicationIdSuffix = ".v2"'
+          if s.count(old) != 1:
+              raise SystemExit("Expected exactly one debug applicationIdSuffix; refusing unsafe patch")
+          p.write_text(s.replace(old, new))
+          if 'applicationIdSuffix = ".v2"' not in p.read_text():
+              raise SystemExit("V2 application ID patch verification failed")
+          PY
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
+          accept-android-sdk-licenses: true
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.7"
+
+      - name: Build isolated V2 APK
+        working-directory: build_src/DailySmart
+        run: gradle assembleDebug --stacktrace
+
+      - name: Verify V2 package identity
+        working-directory: build_src/DailySmart
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          meta = json.loads(Path("app/build/outputs/apk/debug/output-metadata.json").read_text())
+          app_id = meta["applicationId"]
+          if app_id != "com.dailysmart.app.v2":
+              raise SystemExit(f"Unexpected V2 application ID: {app_id}")
+          apk = Path("app/build/outputs/apk/debug/app-debug.apk")
+          if not apk.is_file() or apk.stat().st_size < 1_000_000:
+              raise SystemExit("APK missing or unexpectedly small")
+          print(f"Verified {app_id}; APK size={apk.stat().st_size} bytes")
+          PY
+
+      - name: Upload V2 APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: DailySmart-V2-APK
+          path: build_src/DailySmart/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
