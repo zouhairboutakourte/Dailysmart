@@ -27,6 +27,8 @@ jobs:
           gradle-version: '8.9'
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools platforms;android-35 build-tools;35.0.0
       - name: Build standalone V2 APK
         working-directory: DailySmartV2
         run: gradle :app:assembleDebug --stacktrace
