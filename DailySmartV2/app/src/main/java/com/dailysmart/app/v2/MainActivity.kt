@@ -93,7 +93,7 @@ fun DailySmartApp() {
     }
     val xlsxImportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         if (uri != null) runCatching {
-            val bytes = context.contentResolver.openInputStream(uri)!!.use { it.readBytes() }
+            val bytes = context.contentResolver.openInputStream(uri)!!.use { ExcelWorkbook.readBounded(it) }
             val imported = ExcelWorkbook.importFinance(bytes)
             money = money + imported
             saveMoney()
