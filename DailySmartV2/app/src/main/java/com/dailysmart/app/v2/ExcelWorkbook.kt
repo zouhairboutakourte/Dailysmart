@@ -120,6 +120,7 @@ object ExcelWorkbook {
             val type = row.getOrNull(typeCol).orEmpty().lowercase()
             val income = type.contains("income") || type.contains("revenu") || type.contains("دخل") || type.contains("recette")
             val description = row.getOrNull(descriptionCol).orEmpty().ifBlank { if (income) "Income" else "Expense" }
+            if (description.length > 500) return@mapNotNull null
             MoneyItem(description, amount, income)
         }
     }
