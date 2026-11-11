@@ -67,6 +67,9 @@ fun DailySmartApp() {
             )
         }
     }
+    DisposableEffect(database) {
+        onDispose { database.close() }
+    }
     var tasks by remember { mutableStateOf(database.loadTasks()) }
     var money by remember { mutableStateOf(database.loadMoney()) }
     var habits by remember { mutableStateOf(database.loadHabitsForToday(todayKey())) }
