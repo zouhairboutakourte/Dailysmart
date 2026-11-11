@@ -19,7 +19,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -29,11 +31,15 @@ import java.util.Date
 import java.util.Locale
 import java.io.InputStream
 
-private val Navy = Color(0xFF0B1220)
-private val Panel = Color(0xFF151F31)
-private val Accent = Color(0xFF67D5C2)
-private val Muted = Color(0xFF9BAAC0)
-private val White = Color(0xFFF4F7FB)
+private val Navy = Color(0xFF080F1F)
+private val Panel = Color(0xFF121E34)
+private val PanelRaised = Color(0xFF1A2944)
+private val Accent = Color(0xFF76E6C6)
+private val Lavender = Color(0xFF9C9BFF)
+private val Gold = Color(0xFFFFC978)
+private val ExpenseColor = Color(0xFFFF8D9B)
+private val Muted = Color(0xFF9AABC4)
+private val White = Color(0xFFF4F7FF)
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -144,8 +150,8 @@ fun DailySmartApp() {
                 dismissButton = { TextButton(onClick = { pendingRestore = null }) { Text("Cancel") } }
             )
         }
-        Scaffold(containerColor = Navy, bottomBar = {
-            NavigationBar(containerColor = Panel) {
+        Scaffold(containerColor = Color.Transparent, bottomBar = {
+            NavigationBar(containerColor = Panel, tonalElevation = 12.dp) {
                 listOf("Assistant", "Finance", "Tasks", "Habits", "Excel", "Settings").forEach { name ->
                     NavigationBarItem(selected = tab == name, onClick = { tab = name }, icon = {
                         Icon(when(name) { "Assistant" -> Icons.Default.AutoAwesome; "Finance" -> Icons.Default.AccountBalanceWallet; "Tasks" -> Icons.Default.CheckCircle; "Habits" -> Icons.Default.Favorite; "Excel" -> Icons.Default.TableChart; else -> Icons.Default.Settings }, null)
@@ -153,14 +159,25 @@ fun DailySmartApp() {
                 }
             }
         }) { pad ->
-            Column(Modifier.fillMaxSize().padding(pad).padding(horizontal = 18.dp)) {
-                Spacer(Modifier.height(16.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        Text("DAILYSMART", color = Accent, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
-                        Text("Your day, under control.", color = White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+            Column(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Navy, Color(0xFF101B31), Navy))).padding(pad).padding(horizontal = 18.dp)) {
+                Spacer(Modifier.height(14.dp))
+                Box(
+                    Modifier.fillMaxWidth().clip(RoundedCornerShape(26.dp))
+                        .background(Brush.linearGradient(listOf(Color(0xFF203B58), Color(0xFF27345D), Color(0xFF17463F))))
+                        .padding(18.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text("DAILYSMART  •  YOUR PERSONAL SPACE", color = Color(0xFFB9F5E5), fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
+                            Spacer(Modifier.height(6.dp))
+                            Text("Your day, under control.", color = White, fontSize = 21.sp, fontWeight = FontWeight.ExtraBold)
+                            Spacer(Modifier.height(5.dp))
+                            Text(SimpleDateFormat("EEEE, d MMMM", Locale.getDefault()).format(Date()), color = Color(0xFFD0D9EC), fontSize = 12.sp)
+                        }
+                        Box(Modifier.size(54.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.12f)), contentAlignment = Alignment.Center) {
+                            Icon(Icons.Default.Bolt, null, tint = Gold, modifier = Modifier.size(30.dp))
+                        }
                     }
-                    Box(Modifier.size(42.dp).background(Panel, CircleShape), contentAlignment = Alignment.Center) { Icon(Icons.Default.Bolt, null, tint = Accent) }
                 }
                 Spacer(Modifier.height(18.dp))
                 when (tab) {
@@ -205,8 +222,22 @@ fun DailySmartApp() {
                         Spacer(Modifier.height(14.dp))
                         Text("QUICK OVERVIEW", color = Muted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            SummaryCard("Tasks", "${tasks.count { it.done }}/${tasks.size} done", Modifier.weight(1f))
-                            SummaryCard("Balance", "${"%.0f".format(money.sumOf { if (it.income) it.amount else -it.amount })} DH", Modifier.weight(1f))
+                            SummaryCard("Tasks", "${tasks.count { it.done }}/${tasks.size} done", Modifier.weight(1f), Lavender)
+                            SummaryCard("Balance", "${"%.0f".format(money.sumOf { if (it.income) it.amount else -it.amount })} DH", Modifier.weight(1f), Accent)
+                        }
+                        val taskProgress = if (tasks.isEmpty()) 0f else tasks.count { it.done }.toFloat() / tasks.size
+                        Spacer(Modifier.height(8.dp))
+                        Card(colors = CardDefaults.cardColors(containerColor = PanelRaised), shape = RoundedCornerShape(18.dp)) {
+                            Column(Modifier.fillMaxWidth().padding(15.dp)) {
+                                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                                    Text("Today’s momentum", color = White, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                                    Text("${(taskProgress * 100).toInt()}%", color = Accent, fontWeight = FontWeight.Bold)
+                                }
+                                Spacer(Modifier.height(10.dp))
+                                LinearProgressIndicator(progress = { taskProgress }, modifier = Modifier.fillMaxWidth().height(7.dp).clip(CircleShape), color = Accent, trackColor = Navy)
+                                Spacer(Modifier.height(7.dp))
+                                Text(if (tasks.isEmpty()) "Add your first task and build a little momentum." else if (taskProgress >= 1f) "Everything is done. Great work!" else "One step at a time. Keep your streak moving.", color = Muted, fontSize = 12.sp)
+                            }
                         }
                     }
                     "Tasks" -> {
@@ -229,7 +260,7 @@ fun DailySmartApp() {
                         val income = money.filter { it.income }.sumOf { it.amount }
                         val expense = money.filterNot { it.income }.sumOf { it.amount }
                         Text("PERSONAL FINANCE", color = Muted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) { SummaryCard("Income", "${"%.2f".format(income)} DH", Modifier.weight(1f)); SummaryCard("Expenses", "${"%.2f".format(expense)} DH", Modifier.weight(1f)) }
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) { SummaryCard("Income", "${"%.2f".format(income)} DH", Modifier.weight(1f), Accent); SummaryCard("Expenses", "${"%.2f".format(expense)} DH", Modifier.weight(1f), ExpenseColor) }
                         SummaryCard("Available balance", "${"%.2f".format(income-expense)} DH", Modifier.fillMaxWidth())
                         OutlinedTextField(value = newTitle, onValueChange = { newTitle = it }, modifier = Modifier.fillMaxWidth(), placeholder = { Text("Description") }, singleLine = true)
                         OutlinedTextField(value = newAmount, onValueChange = { newAmount = it }, modifier = Modifier.fillMaxWidth(), placeholder = { Text("Amount in MAD") }, singleLine = true)
@@ -333,9 +364,17 @@ fun DailySmartApp() {
 }
 
 @Composable
-private fun SummaryCard(label: String, value: String, modifier: Modifier = Modifier) {
-    Card(modifier = modifier.padding(vertical = 5.dp), colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(16.dp)) {
-        Column(Modifier.padding(14.dp)) { Text(label, color = Muted, fontSize = 12.sp); Spacer(Modifier.height(6.dp)); Text(value, color = White, fontSize = 18.sp, fontWeight = FontWeight.Bold) }
+private fun SummaryCard(label: String, value: String, modifier: Modifier = Modifier, tint: Color = Accent) {
+    Card(modifier = modifier.padding(vertical = 5.dp), colors = CardDefaults.cardColors(containerColor = PanelRaised), shape = RoundedCornerShape(18.dp)) {
+        Column(Modifier.padding(14.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.size(7.dp).clip(CircleShape).background(tint))
+                Spacer(Modifier.width(7.dp))
+                Text(label, color = Muted, fontSize = 12.sp)
+            }
+            Spacer(Modifier.height(8.dp))
+            Text(value, color = White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+        }
     }
 }
 
