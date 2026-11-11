@@ -2,9 +2,10 @@
 
 Independent Android application built with Kotlin and Jetpack Compose.
 
-## Implemented in version 2.3
+## Implemented in version 2.4
 - Separate package: `com.dailysmart.app.v2`
-- Dark navy interface
+- Refreshed dark navy interface with a blue/teal gradient hero, mint/lavender/gold accents, clearer finance colors, and daily progress feedback
+- Branded launcher icon
 - Offline assistant commands in English, French and Arabic: create tasks, record income/expenses, and request a finance report (not a connected LLM)
 - Finance ledger: income, expenses and MAD balance
 - Task list: add, complete and delete
@@ -12,11 +13,11 @@ Independent Android application built with Kotlin and Jetpack Compose.
 - Finance import/export for DailySmart-format XLSX workbooks and CSV (XLSX imports are limited to 10 MB and bounded ZIP expansion for safety)
 - Settings screen with transparent privacy and feature status
 - Versioned JSON backup and confirmed restore for tasks, finance records and habits
-- Local persistence via SharedPreferences, with delimiter-safe encoding for user-entered task, habit and transaction descriptions; legacy saved records remain readable
+- Offline SQLite persistence for tasks, finance records and habits, with a one-time transactional import from existing SharedPreferences records
 - No ads, no subscription, no account and no embedded AI API key
 
 ## Not yet implemented
-- Room database migration and automated persistence tests
+- Automated persistence and migration tests
 - Real conversational AI / secure backend
 - Editing arbitrary Excel workbooks, formulas and charts; XLSX support currently focuses on DailySmart finance transaction sheets
 - Full Arabic, Darija, French and English interface localization
