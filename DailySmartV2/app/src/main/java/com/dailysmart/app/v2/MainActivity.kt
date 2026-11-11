@@ -80,7 +80,7 @@ fun DailySmartApp() {
 
     fun saveTasks() { prefs.edit().putString("tasks", tasks.joinToString("\n") { (if (it.done) "1" else "0") + "|" + encodeStoredText(it.title.replace("\n", " ")) }).apply() }
     fun saveMoney() { prefs.edit().putString("money", money.joinToString("\n") { (if (it.income) "I" else "E") + "|" + it.amount + "|" + encodeStoredText(it.title.replace("\n", " ")) }).apply() }
-    fun saveHabits() { prefs.edit().putString("habits", habits.joinToString("\n") { (if (it.completedToday) "1" else "0") + "|" + encodeStoredText(it.title.replace("\n", " ")) }).apply() }
+    fun saveHabits() { prefs.edit().putString("habits", habits.joinToString("\n") { (if (it.completedToday) "1" else "0") + "|" + encodeStoredText(it.title.replace("\n", " ")) }).putString("habits_date", todayKey()).apply() }
 
     val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/csv")) { uri ->
         if (uri != null) runCatching {
@@ -365,8 +365,12 @@ private fun decodeStoredText(value: String): String {
 
 private fun loadTasks(p: android.content.SharedPreferences): List<TaskItem> =
     p.getString("tasks", "")!!.lines().filter { it.contains("|") }.map { TaskItem(decodeStoredText(it.substringAfter("|")), it.substringBefore("|") == "1") }
-private fun loadHabits(p: android.content.SharedPreferences): List<HabitItem> =
-    p.getString("habits", "")!!.lines().filter { it.contains("|") }.map { HabitItem(decodeStoredText(it.substringAfter("|")), it.substringBefore("|") == "1") }
+private fun loadHabits(p: android.content.SharedPreferences): List<HabitItem> {
+    val items = p.getString("habits", "")!!.lines().filter { it.contains("|") }
+        .map { HabitItem(decodeStoredText(it.substringAfter("|")), it.substringBefore("|") == "1") }
+    return if (p.getString("habits_date", "") == todayKey()) items else items.map { it.copy(completedToday = false) }
+}
+private fun todayKey(): String = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
 private fun loadMoney(p: android.content.SharedPreferences): List<MoneyItem> =
     p.getString("money", "")!!.lines().filter { it.count { c -> c == '|' } >= 2 }.mapNotNull {
         val a = it.split("|", limit = 3); MoneyItem(decodeStoredText(a[2]), a[1].toDoubleOrNull() ?: return@mapNotNull null, a[0] == "I")
