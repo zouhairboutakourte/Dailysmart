@@ -52,7 +52,7 @@ object AssistantEngine {
                     ?: return AssistantAction.Help
                 val amount = amountMatch.groupValues[1].replace(',', '.').toDoubleOrNull()
                     ?: return AssistantAction.Help
-                if (amount <= 0.0) return AssistantAction.Help
+                if (!amount.isFinite() || amount <= 0.0) return AssistantAction.Help
                 val description = (rest.removeRange(amountMatch.range).trim()).ifBlank {
                     if (isIncome) "Income" else "Expense"
                 }
