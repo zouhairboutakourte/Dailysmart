@@ -6,6 +6,9 @@ on:
       - 'DailySmartV2/**'
       - '.github/workflows/build-dailysmart-v2.yml'
   workflow_dispatch:
+concurrency:
+  group: dailysmart-dev-build
+  cancel-in-progress: true
 permissions:
   contents: read
 jobs:
