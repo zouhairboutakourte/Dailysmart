@@ -123,21 +123,24 @@ fun DailySmartApp() {
                         Spacer(Modifier.height(8.dp))
                         Button(onClick = {
                             val c = command.trim()
-                            when {
-                                c.startsWith("add task ", true) || c.startsWith("ajouter tâche ", true) || c.startsWith("زيد مهمة ") -> {
-                                    val title = c.substringAfter(" ", "").substringAfter(" ", "").trim()
-                                    if (title.isNotBlank()) { tasks = tasks + TaskItem(title); saveTasks(); info = "Task added: $title" } else info = "Write a task after 'add task'."
+                            when (val action = AssistantEngine.parse(c)) {
+                                is AssistantAction.AddTask -> {
+                                    tasks = tasks + TaskItem(action.title)
+                                    saveTasks()
+                                    info = "Task added: ${action.title}"
                                 }
-                                c.startsWith("expense ", true) || c.startsWith("مصروف ") -> {
-                                    val parts = c.split(" ")
-                                    val amount = parts.firstNotNullOfOrNull { it.toDoubleOrNull() }
-                                    if (amount != null && amount > 0) { money = money + MoneyItem(c.substringAfter(amount.toString()).trim().ifBlank { "Expense" }, amount, false); saveMoney(); info = "Expense recorded: $amount MAD" } else info = "Try: expense 50 lunch"
+                                is AssistantAction.AddMoney -> {
+                                    money = money + MoneyItem(action.description, action.amount, action.income)
+                                    saveMoney()
+                                    info = "${if (action.income) "Income" else "Expense"} recorded: ${action.amount} MAD"
                                 }
-                                c.startsWith("income ", true) -> {
-                                    val amount = c.split(" ").firstNotNullOfOrNull { it.toDoubleOrNull() }
-                                    if (amount != null && amount > 0) { money = money + MoneyItem(c.substringAfter(amount.toString()).trim().ifBlank { "Income" }, amount, true); saveMoney(); info = "Income recorded: $amount MAD" } else info = "Try: income 8000 salary"
+                                AssistantAction.FinanceReport -> {
+                                    val totalIncome = money.filter { it.income }.sumOf { it.amount }
+                                    val totalExpense = money.filterNot { it.income }.sumOf { it.amount }
+                                    val balance = totalIncome - totalExpense
+                                    info = "Finance report · Income: ${"%.2f".format(totalIncome)} MAD · Expenses: ${"%.2f".format(totalExpense)} MAD · Balance: ${"%.2f".format(balance)} MAD"
                                 }
-                                else -> info = "I can currently execute: add task [title], expense [amount] [label], income [amount] [label]. Full conversational AI is a later secure backend integration."
+                                AssistantAction.Help -> info = AssistantEngine.helpText()
                             }
                             command = ""
                         }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(14.dp)) { Icon(Icons.Default.Send, null); Spacer(Modifier.width(8.dp)); Text("Run command") }
