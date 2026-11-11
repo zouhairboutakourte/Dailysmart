@@ -113,8 +113,7 @@ class LocalDatabase(context: Context) : SQLiteOpenHelper(
 
     private fun insertMoney(db: SQLiteDatabase, items: List<MoneyItem>) {
         db.delete("money", null, null)
-        items.forEach { item ->
-            require(item.amount.isFinite() && item.amount > 0.0)
+        items.filter { it.amount.isFinite() && it.amount > 0.0 }.forEach { item ->
             val values = ContentValues().apply {
                 put("title", item.title)
                 put("amount", item.amount)
