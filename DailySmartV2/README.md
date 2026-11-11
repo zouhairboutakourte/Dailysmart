@@ -9,16 +9,16 @@ Independent Android application built with Kotlin and Jetpack Compose.
 - Finance ledger: income, expenses and MAD balance
 - Task list: add, complete and delete
 - Habits: add, daily check-off, reset checkmarks and delete
-- Finance import/export for XLSX workbooks and CSV
+- Finance import/export for DailySmart-format XLSX workbooks and CSV (XLSX imports are limited to 10 MB and bounded ZIP expansion for safety)
 - Settings screen with transparent privacy and feature status
 - Local persistence via SharedPreferences, with delimiter-safe encoding for user-entered task, habit and transaction descriptions; legacy saved records remain readable
 - No ads, no subscription, no account and no embedded AI API key
 
 ## Not yet implemented
-- Room database and automated persistence tests
+- Room database migration and automated persistence tests
 - Real conversational AI / secure backend
 - Editing arbitrary Excel workbooks, formulas and charts; XLSX support currently focuses on DailySmart finance transaction sheets
 - Full Arabic, Darija, French and English interface localization
 - Calendar, reminders, goals and backup/restore
 
-The app labels unavailable capabilities honestly; it does not present local command shortcuts as an LLM.
+XLSX imports enforce a 10 MB source-file limit, a 10 MB total expanded-content limit, a 5 MB per-entry limit and a 64-entry limit. The app labels unavailable capabilities honestly; it does not present local command shortcuts as an LLM.
