@@ -38,7 +38,7 @@ object AssistantEngine {
         for ((prefix, isIncome, _) in moneyPrefixes.sortedByDescending { it.first.length }) {
             if (lower.startsWith(prefix)) {
                 val rest = input.drop(prefix.length).trim().trimStart(':', '-', ' ')
-                val amountMatch = Regex("""(?:^|\\s)(\\d+(?:[.,]\\d{1,2})?)(?=\\s|$)""").find(rest)
+                val amountMatch = Regex("""(?:^|\s)(\d+(?:[.,]\d{1,2})?)(?=\s|$)""").find(rest)
                     ?: return AssistantAction.Help
                 val amount = amountMatch.groupValues[1].replace(',', '.').toDoubleOrNull()
                     ?: return AssistantAction.Help
