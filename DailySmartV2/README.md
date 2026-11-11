@@ -11,7 +11,7 @@ Independent Android application built with Kotlin and Jetpack Compose.
 - Habits: add, daily check-off, reset checkmarks and delete
 - Finance import/export for XLSX workbooks and CSV
 - Settings screen with transparent privacy and feature status
-- Local persistence via SharedPreferences
+- Local persistence via SharedPreferences, with delimiter-safe encoding for user-entered task, habit and transaction descriptions; legacy saved records remain readable
 - No ads, no subscription, no account and no embedded AI API key
 
 ## Not yet implemented
