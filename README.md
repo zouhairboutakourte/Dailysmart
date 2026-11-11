@@ -1,13 +1,28 @@
-# Daily Smart — Native Android Application
+# DailySmart — Native Android App
 
-Rebuilt as a true Native Android Application using:
+The current native Android application is in `DailySmartV2/`.
+
+## Technology
 - Kotlin 1.9.24
-- Jetpack Compose with Material 3
-- Room Database for offline-first local persistence
+- Jetpack Compose and Material 3
+- Offline-first SQLite persistence (via `SQLiteOpenHelper`; not Room)
 - Android Gradle Plugin 8.5.2
+- Application ID: `com.dailysmart.app.v2`
+- Current app version: 2.5.0 (versionCode 6)
 
-## How to Open:
-1. Extract this zip file.
-2. Open Android Studio.
-3. Select "File" > "Open..." and choose the extracted folder.
-4. Run on an Android emulator or physical device.
+## Build and download
+The `dev` branch contains the active development version. GitHub Actions builds and tests the debug APK:
+1. Open the [DailySmart V2 build workflow](https://github.com/zouhairboutakourte/Dailysmart/actions/workflows/build-dailysmart-v2.yml).
+2. Select the latest successful run on `dev`.
+3. Under **Artifacts**, download `DailySmart-V2-Native-APK`.
+4. Extract the ZIP and install the APK on an Android device.
+
+The APK artifact is temporary and expires according to GitHub's artifact-retention policy.
+
+## Open the project
+Open the `DailySmartV2/` folder in Android Studio, allow Gradle sync to finish, then run the app on an emulator or connected Android device.
+
+See [DailySmartV2/README.md](DailySmartV2/README.md) for implemented features, limitations, and data-safety details.
+
+## Development policy
+Active work is on `dev`. The `main` branch is not modified by this workflow.
