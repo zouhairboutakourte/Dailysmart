@@ -391,3 +391,18 @@ private fun parseCsvLine(line: String): List<String> {
     fields += current.toString()
     return fields
 }
+
+
+private fun readBackupBounded(input: InputStream): ByteArray {
+    val output = java.io.ByteArrayOutputStream()
+    val buffer = ByteArray(8 * 1024)
+    var total = 0
+    while (true) {
+        val count = input.read(buffer)
+        if (count < 0) break
+        total += count
+        require(total <= BackupCodec.MAX_BACKUP_BYTES) { "Backup exceeds the 2 MB safety limit." }
+        output.write(buffer, 0, count)
+    }
+    return output.toByteArray()
+}
