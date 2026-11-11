@@ -21,7 +21,7 @@ Independent Android application built with Kotlin and Jetpack Compose.
 - No ads, no subscription, no account and no embedded AI API key
 
 ## Not yet implemented
-- Automated SQLite migration and persistence tests
+- CSV parser unit tests; SQLite migration still needs device-level verification
 - Real conversational AI / secure backend
 - Editing arbitrary Excel workbooks, formulas and charts; XLSX support currently focuses on DailySmart finance transaction sheets
 - Full Arabic, Darija, French and English interface localization
