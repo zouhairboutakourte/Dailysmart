@@ -185,9 +185,9 @@ fun DailySmartApp() {
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
-                            Text("DAILYSMART  •  YOUR PERSONAL SPACE", color = Color(0xFFB9F5E5), fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
+                            Text(uiText(language, "DAILYSMART  •  YOUR PERSONAL SPACE", "DAILYSMART  •  VOTRE ESPACE", "DAILYSMART  •  مساحتك الخاصة"), color = Color(0xFFB9F5E5), fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
                             Spacer(Modifier.height(6.dp))
-                            Text("Your day, under control.", color = White, fontSize = 21.sp, fontWeight = FontWeight.ExtraBold)
+                            Text(uiText(language, "Your day, under control.", "Votre journée, bien organisée.", "نهارك منظم وتحت السيطرة."), color = White, fontSize = 21.sp, fontWeight = FontWeight.ExtraBold)
                             Spacer(Modifier.height(5.dp))
                             Text(SimpleDateFormat("EEEE, d MMMM", Locale.getDefault()).format(Date()), color = Color(0xFFD0D9EC), fontSize = 12.sp)
                         }
@@ -199,19 +199,19 @@ fun DailySmartApp() {
                 Spacer(Modifier.height(18.dp))
                 when (tab) {
                     "Assistant" -> {
-                        Text("AI WORKSPACE", color = Muted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Text(uiText(language, "AI WORKSPACE", "ESPACE ASSISTANT", "مساحة المساعد"), color = Muted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         Spacer(Modifier.height(10.dp))
                         Card(colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(20.dp)) {
                             Column(Modifier.padding(16.dp)) {
-                                Row(verticalAlignment = Alignment.CenterVertically) { Icon(Icons.Default.AutoAwesome, null, tint = Accent); Spacer(Modifier.width(8.dp)); Text("DailySmart Assistant", fontWeight = FontWeight.Bold, fontSize = 18.sp) }
+                                Row(verticalAlignment = Alignment.CenterVertically) { Icon(Icons.Default.AutoAwesome, null, tint = Accent); Spacer(Modifier.width(8.dp)); Text(uiText(language, "DailySmart Assistant", "Assistant DailySmart", "مساعد DailySmart"), fontWeight = FontWeight.Bold, fontSize = 18.sp) }
                                 Spacer(Modifier.height(12.dp))
-                                Text("Tell me what you want to do. I can execute quick actions locally; secure online AI will be connected through a backend, never an API key inside the app.", color = Muted, fontSize = 13.sp)
+                                Text(uiText(language, "Tell me what you want to do. I can execute quick actions locally; secure online AI will be connected through a backend, never an API key inside the app.", "Décrivez ce que vous voulez faire. Les actions rapides fonctionnent localement ; l’IA en ligne sera connectée via un serveur sécurisé.", "اكتب ما تريد فعله. أستطيع تنفيذ أوامر سريعة محلياً، وسيتم ربط الذكاء الاصطناعي عبر خادم آمن لاحقاً."), color = Muted, fontSize = 13.sp)
                                 Spacer(Modifier.height(12.dp))
                                 Text(info, color = Accent, fontSize = 13.sp)
                             }
                         }
                         Spacer(Modifier.height(14.dp))
-                        OutlinedTextField(value = command, onValueChange = { command = it }, modifier = Modifier.fillMaxWidth(), placeholder = { Text("Ex: add task call the bank") }, shape = RoundedCornerShape(16.dp), minLines = 2)
+                        OutlinedTextField(value = command, onValueChange = { command = it }, modifier = Modifier.fillMaxWidth(), placeholder = { Text(uiText(language, "Ex: add task call the bank", "Ex : ajouter une tâche appeler la banque", "مثال: أضف مهمة الاتصال بالبنك")) }, shape = RoundedCornerShape(16.dp), minLines = 2)
                         Spacer(Modifier.height(8.dp))
                         Button(onClick = {
                             val c = command.trim()
@@ -235,9 +235,9 @@ fun DailySmartApp() {
                                 AssistantAction.Help -> info = AssistantEngine.helpText()
                             }
                             command = ""
-                        }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(14.dp)) { Icon(Icons.Default.Send, null); Spacer(Modifier.width(8.dp)); Text("Run command") }
+                        }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(14.dp)) { Icon(Icons.Default.Send, null); Spacer(Modifier.width(8.dp)); Text(uiText(language, "Run command", "Exécuter", "تنفيذ الأمر")) }
                         Spacer(Modifier.height(14.dp))
-                        Text("QUICK OVERVIEW", color = Muted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Text(uiText(language, "QUICK OVERVIEW", "APERÇU RAPIDE", "نظرة سريعة"), color = Muted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                             SummaryCard("Tasks", "${tasks.count { it.done }}/${tasks.size} done", Modifier.weight(1f), Lavender)
                             SummaryCard("Balance", "${"%.0f".format(money.sumOf { if (it.income) it.amount else -it.amount })} DH", Modifier.weight(1f), Accent)
@@ -247,22 +247,22 @@ fun DailySmartApp() {
                         Card(colors = CardDefaults.cardColors(containerColor = PanelRaised), shape = RoundedCornerShape(18.dp)) {
                             Column(Modifier.fillMaxWidth().padding(15.dp)) {
                                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                                    Text("Today’s momentum", color = White, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                                    Text(uiText(language, "Today’s momentum", "Votre progression du jour", "تقدمك اليوم"), color = White, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
                                     Text("${(taskProgress * 100).toInt()}%", color = Accent, fontWeight = FontWeight.Bold)
                                 }
                                 Spacer(Modifier.height(10.dp))
                                 LinearProgressIndicator(progress = { taskProgress }, modifier = Modifier.fillMaxWidth().height(7.dp).clip(CircleShape), color = Accent, trackColor = Navy)
                                 Spacer(Modifier.height(7.dp))
-                                Text(if (tasks.isEmpty()) "Add your first task and build a little momentum." else if (taskProgress >= 1f) "Everything is done. Great work!" else "One step at a time. Keep your streak moving.", color = Muted, fontSize = 12.sp)
+                                Text(if (tasks.isEmpty()) uiText(language, "Add your first task and build a little momentum.", "Ajoutez votre première tâche.", "أضف أول مهمة وابدأ يومك.") else if (taskProgress >= 1f) uiText(language, "Everything is done. Great work!", "Tout est terminé. Bravo !", "أنهيت كل شيء، أحسنت!") else uiText(language, "One step at a time. Keep your streak moving.", "Un pas après l’autre.", "خطوة بخطوة، واصل التقدم."), color = Muted, fontSize = 12.sp)
                             }
                         }
                     }
                     "Tasks" -> {
-                        Text("TASKS", color = Muted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                        OutlinedTextField(value = newTitle, onValueChange = { newTitle = it }, modifier = Modifier.fillMaxWidth(), placeholder = { Text("New task") }, singleLine = true)
-                        Button(onClick = { if (newTitle.isNotBlank()) { tasks = tasks + TaskItem(newTitle.trim()); saveTasks(); newTitle = "" } }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(14.dp)) { Icon(Icons.Default.Add, null); Spacer(Modifier.width(7.dp)); Text("Add task") }
+                        Text(uiText(language, "TASKS", "TÂCHES", "المهام"), color = Muted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        OutlinedTextField(value = newTitle, onValueChange = { newTitle = it }, modifier = Modifier.fillMaxWidth(), placeholder = { Text(uiText(language, "New task", "Nouvelle tâche", "مهمة جديدة")) }, singleLine = true)
+                        Button(onClick = { if (newTitle.isNotBlank()) { tasks = tasks + TaskItem(newTitle.trim()); saveTasks(); newTitle = "" } }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(14.dp)) { Icon(Icons.Default.Add, null); Spacer(Modifier.width(7.dp)); Text(uiText(language, "Add task", "Ajouter", "إضافة مهمة")) }
                         val doneRatio = if (tasks.isEmpty()) 0f else tasks.count { it.done }.toFloat() / tasks.size
-                        Text("${tasks.count { it.done }} of ${tasks.size} tasks completed", color = Muted, fontSize = 12.sp)
+                        Text(uiText(language, "${tasks.count { it.done }} of ${tasks.size} tasks completed", "${tasks.count { it.done }} sur ${tasks.size} tâches terminées", "أكملت ${tasks.count { it.done }} من أصل ${tasks.size} مهام"), color = Muted, fontSize = 12.sp)
                         LinearProgressIndicator(progress = { doneRatio }, modifier = Modifier.fillMaxWidth().height(6.dp).clip(CircleShape), color = Lavender, trackColor = PanelRaised)
                         Spacer(Modifier.height(8.dp))
                         LazyColumn(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -280,29 +280,29 @@ fun DailySmartApp() {
                     "Finance" -> {
                         val income = money.filter { it.income }.sumOf { it.amount }
                         val expense = money.filterNot { it.income }.sumOf { it.amount }
-                        Text("PERSONAL FINANCE", color = Muted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Text(uiText(language, "PERSONAL FINANCE", "FINANCES PERSONNELLES", "المالية الشخصية"), color = Muted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) { SummaryCard("Income", "${"%.2f".format(income)} DH", Modifier.weight(1f), Accent); SummaryCard("Expenses", "${"%.2f".format(expense)} DH", Modifier.weight(1f), ExpenseColor) }
                         SummaryCard("Available balance", "${"%.2f".format(income-expense)} DH", Modifier.fillMaxWidth())
-                        OutlinedTextField(value = newTitle, onValueChange = { newTitle = it }, modifier = Modifier.fillMaxWidth(), placeholder = { Text("Description") }, singleLine = true)
-                        OutlinedTextField(value = newAmount, onValueChange = { newAmount = it }, modifier = Modifier.fillMaxWidth(), placeholder = { Text("Amount in MAD") }, singleLine = true)
+                        OutlinedTextField(value = newTitle, onValueChange = { newTitle = it }, modifier = Modifier.fillMaxWidth(), placeholder = { Text(uiText(language, "Description", "Description", "الوصف")) }, singleLine = true)
+                        OutlinedTextField(value = newAmount, onValueChange = { newAmount = it }, modifier = Modifier.fillMaxWidth(), placeholder = { Text(uiText(language, "Amount in MAD", "Montant en MAD", "المبلغ بالدرهم")) }, singleLine = true)
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Button(onClick = { val a = newAmount.toDoubleOrNull(); if (a != null && a > 0) { money = money + MoneyItem(newTitle.ifBlank { "Income" }, a, true); saveMoney(); newTitle = ""; newAmount = "" } }, modifier = Modifier.weight(1f)) { Text("Add income") }
-                            OutlinedButton(onClick = { val a = newAmount.toDoubleOrNull(); if (a != null && a > 0) { money = money + MoneyItem(newTitle.ifBlank { "Expense" }, a, false); saveMoney(); newTitle = ""; newAmount = "" } }, modifier = Modifier.weight(1f)) { Text("Add expense") }
+                            Button(onClick = { val a = newAmount.toDoubleOrNull(); if (a != null && a > 0) { money = money + MoneyItem(newTitle.ifBlank { "Income" }, a, true); saveMoney(); newTitle = ""; newAmount = "" } }, modifier = Modifier.weight(1f)) { Text(uiText(language, "Add income", "Ajouter un revenu", "إضافة مدخول")) }
+                            OutlinedButton(onClick = { val a = newAmount.toDoubleOrNull(); if (a != null && a > 0) { money = money + MoneyItem(newTitle.ifBlank { "Expense" }, a, false); saveMoney(); newTitle = ""; newAmount = "" } }, modifier = Modifier.weight(1f)) { Text(uiText(language, "Add expense", "Ajouter une dépense", "إضافة مصروف")) }
                         }
-                        LazyColumn(modifier = Modifier.weight(1f)) { itemsIndexed(money.reversed()) { _, item -> ListItem(headlineContent = { Text(item.title) }, supportingContent = { Text(if(item.income) "Income" else "Expense", color = Muted) }, trailingContent = { Text("${if(item.income) "+" else "-"}${item.amount} DH", color = if(item.income) Accent else ExpenseColor, fontWeight = FontWeight.Bold) }, colors = ListItemDefaults.colors(containerColor = Panel)) } }
+                        LazyColumn(modifier = Modifier.weight(1f)) { itemsIndexed(money.reversed()) { _, item -> ListItem(headlineContent = { Text(item.title) }, supportingContent = { Text(if(item.income) uiText(language, "Income", "Revenu", "مدخول") else uiText(language, "Expense", "Dépense", "مصروف"), color = Muted) }, trailingContent = { Text("${if(item.income) "+" else "-"}${item.amount} DH", color = if(item.income) Accent else ExpenseColor, fontWeight = FontWeight.Bold) }, colors = ListItemDefaults.colors(containerColor = Panel)) } }
                     }
                     "Habits" -> {
-                        Text("DAILY HABITS", color = Muted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Text(uiText(language, "DAILY HABITS", "HABITUDES QUOTIDIENNES", "العادات اليومية"), color = Muted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         Spacer(Modifier.height(8.dp))
                         Card(colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(16.dp)) {
                             Column(Modifier.padding(14.dp)) {
-                                Text("${habits.count { it.completedToday }} / ${habits.size} completed today", color = Accent, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                                Text("Build consistency one day at a time.", color = Muted, fontSize = 12.sp)
+                                Text(uiText(language, "${habits.count { it.completedToday }} / ${habits.size} completed today", "${habits.count { it.completedToday }} / ${habits.size} terminées aujourd’hui", "أنجزت ${habits.count { it.completedToday }} من ${habits.size} اليوم"), color = Accent, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                                Text(uiText(language, "Build consistency one day at a time.", "La régularité se construit chaque jour.", "الاستمرارية كتتبنى كل نهار."), color = Muted, fontSize = 12.sp)
                             }
                         }
                         Spacer(Modifier.height(10.dp))
-                        OutlinedTextField(value = newHabit, onValueChange = { newHabit = it }, modifier = Modifier.fillMaxWidth(), placeholder = { Text("New daily habit") }, singleLine = true)
-                        Button(onClick = { if (newHabit.isNotBlank()) { habits = habits + HabitItem(newHabit.trim()); saveHabits(); newHabit = "" } }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(14.dp)) { Icon(Icons.Default.Add, null); Spacer(Modifier.width(7.dp)); Text("Add habit") }
+                        OutlinedTextField(value = newHabit, onValueChange = { newHabit = it }, modifier = Modifier.fillMaxWidth(), placeholder = { Text(uiText(language, "New daily habit", "Nouvelle habitude", "عادة يومية جديدة")) }, singleLine = true)
+                        Button(onClick = { if (newHabit.isNotBlank()) { habits = habits + HabitItem(newHabit.trim()); saveHabits(); newHabit = "" } }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(14.dp)) { Icon(Icons.Default.Add, null); Spacer(Modifier.width(7.dp)); Text(uiText(language, "Add habit", "Ajouter une habitude", "إضافة عادة")) }
                         LazyColumn(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             itemsIndexed(habits) { i, habit ->
                                 Card(colors = CardDefaults.cardColors(containerColor = Panel)) {
@@ -315,10 +315,10 @@ fun DailySmartApp() {
                                 }
                             }
                         }
-                        OutlinedButton(onClick = { habits = habits.map { it.copy(completedToday = false) }; saveHabits() }, modifier = Modifier.fillMaxWidth()) { Text("Reset daily checkmarks") }
+                        OutlinedButton(onClick = { habits = habits.map { it.copy(completedToday = false) }; saveHabits() }, modifier = Modifier.fillMaxWidth()) { Text(uiText(language, "Reset daily checkmarks", "Réinitialiser les coches", "إعادة ضبط علامات اليوم")) }
                     }
                     "Settings" -> {
-                        Text("SETTINGS", color = Muted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Text(uiText(language, "SETTINGS", "PARAMÈTRES", "الإعدادات"), color = Muted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         Card(colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(16.dp)) {
                             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                                 Text(uiText(language, "Language", "Langue", "اللغة"), color = Muted, fontSize = 12.sp)
@@ -332,21 +332,21 @@ fun DailySmartApp() {
                                 Text("DailySmart V2", color = White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
                                 Text("Version 2.4.0 · Independent Android application", color = Muted, fontSize = 12.sp)
                                 Divider(color = Muted.copy(alpha = 0.25f))
-                                Text("Currency", color = Muted, fontSize = 12.sp)
-                                Text("Moroccan dirham (MAD)", color = White)
-                                Text("Storage", color = Muted, fontSize = 12.sp)
-                                Text("Your tasks, habits and finance records are stored locally on this device.", color = White)
-                                Text("Privacy", color = Muted, fontSize = 12.sp)
-                                Text("No ads. No account required. No AI API key is embedded in this APK.", color = White)
+                                Text(uiText(language, "Currency", "Devise", "العملة"), color = Muted, fontSize = 12.sp)
+                                Text(uiText(language, "Moroccan dirham (MAD)", "Dirham marocain (MAD)", "الدرهم المغربي (MAD)"), color = White)
+                                Text(uiText(language, "Storage", "Stockage", "التخزين"), color = Muted, fontSize = 12.sp)
+                                Text(uiText(language, "Your tasks, habits and finance records are stored locally on this device.", "Vos tâches, habitudes et finances sont stockées sur cet appareil.", "المهام والعادات والسجلات المالية محفوظة محلياً على هذا الهاتف."), color = White)
+                                Text(uiText(language, "Privacy", "Confidentialité", "الخصوصية"), color = Muted, fontSize = 12.sp)
+                                Text(uiText(language, "No ads. No account required. No AI API key is embedded in this APK.", "Sans publicité ni compte. Aucune clé API IA dans l’application.", "بدون إعلانات أو حساب، ولا توجد مفاتيح ذكاء اصطناعي داخل التطبيق."), color = White)
                                 Text("Online AI is not connected yet. XLSX finance import/export is available.", color = Accent, fontSize = 12.sp)
                                 Divider(color = Muted.copy(alpha = 0.25f))
-                                Text("Backup & restore", color = Muted, fontSize = 12.sp)
-                                Text("Create a portable copy of tasks, finance records and habits. Restoring replaces current data only after confirmation.", color = White, fontSize = 12.sp)
+                                Text(uiText(language, "Backup & restore", "Sauvegarde et restauration", "النسخ الاحتياطي والاسترجاع"), color = Muted, fontSize = 12.sp)
+                                Text(uiText(language, "Create a portable copy of tasks, finance records and habits. Restoring replaces current data only after confirmation.", "Créez une copie de vos tâches, finances et habitudes. La restauration remplace les données après confirmation.", "أنشئ نسخة من مهامك ومصاريفك وعاداتك. الاسترجاع يعوض البيانات الحالية بعد التأكيد."), color = White, fontSize = 12.sp)
                                 Button(onClick = { backupLauncher.launch("DailySmart-backup.json") }, modifier = Modifier.fillMaxWidth()) {
-                                    Icon(Icons.Default.Backup, null); Spacer(Modifier.width(8.dp)); Text("Create full backup")
+                                    Icon(Icons.Default.Backup, null); Spacer(Modifier.width(8.dp)); Text(uiText(language, "Create full backup", "Créer une sauvegarde", "إنشاء نسخة احتياطية"))
                                 }
                                 OutlinedButton(onClick = { restoreLauncher.launch("application/json") }, modifier = Modifier.fillMaxWidth()) {
-                                    Icon(Icons.Default.Restore, null); Spacer(Modifier.width(8.dp)); Text("Restore from backup")
+                                    Icon(Icons.Default.Restore, null); Spacer(Modifier.width(8.dp)); Text(uiText(language, "Restore from backup", "Restaurer une sauvegarde", "استرجاع نسخة احتياطية"))
                                 }
                             }
                         }
