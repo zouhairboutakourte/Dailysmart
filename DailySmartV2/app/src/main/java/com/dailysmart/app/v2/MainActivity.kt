@@ -59,9 +59,9 @@ fun DailySmartApp() {
     var newAmount by remember { mutableStateOf("") }
     var info by remember { mutableStateOf("Your personal workspace is ready.") }
 
-    fun saveTasks() { prefs.edit().putString("tasks", tasks.joinToString("\n") { (if (it.done) "1" else "0") + "|" + it.title.replace("\n", " ") }).apply() }
-    fun saveMoney() { prefs.edit().putString("money", money.joinToString("\n") { (if (it.income) "I" else "E") + "|" + it.amount + "|" + it.title.replace("\n", " ") }).apply() }
-    fun saveHabits() { prefs.edit().putString("habits", habits.joinToString("\n") { (if (it.completedToday) "1" else "0") + "|" + it.title.replace("\n", " ") }).apply() }
+    fun saveTasks() { prefs.edit().putString("tasks", tasks.joinToString("\n") { (if (it.done) "1" else "0") + "|" + encodeStoredText(it.title.replace("\n", " ")) }).apply() }
+    fun saveMoney() { prefs.edit().putString("money", money.joinToString("\n") { (if (it.income) "I" else "E") + "|" + it.amount + "|" + encodeStoredText(it.title.replace("\n", " ")) }).apply() }
+    fun saveHabits() { prefs.edit().putString("habits", habits.joinToString("\n") { (if (it.completedToday) "1" else "0") + "|" + encodeStoredText(it.title.replace("\n", " ")) }).apply() }
 
     val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/csv")) { uri ->
         if (uri != null) runCatching {
@@ -228,7 +228,7 @@ fun DailySmartApp() {
                         Card(colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(16.dp)) {
                             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                                 Text("DailySmart V2", color = White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                                Text("Version 2.1 · Independent Android application", color = Muted, fontSize = 12.sp)
+                                Text("Version 2.2.0 · Independent Android application", color = Muted, fontSize = 12.sp)
                                 Divider(color = Muted.copy(alpha = 0.25f))
                                 Text("Currency", color = Muted, fontSize = 12.sp)
                                 Text("Moroccan dirham (MAD)", color = White)
@@ -287,13 +287,38 @@ private fun SummaryCard(label: String, value: String, modifier: Modifier = Modif
         Column(Modifier.padding(14.dp)) { Text(label, color = Muted, fontSize = 12.sp); Spacer(Modifier.height(6.dp)); Text(value, color = White, fontSize = 18.sp, fontWeight = FontWeight.Bold) }
     }
 }
+
+/**
+ * Prefix-marked URL-safe Base64 keeps delimiters and newlines inside user text
+ * from corrupting the lightweight SharedPreferences record format. Legacy
+ * unprefixed values remain readable for existing installations.
+ */
+private fun encodeStoredText(value: String): String =
+    "b64:" + android.util.Base64.encodeToString(
+        value.toByteArray(Charsets.UTF_8),
+        android.util.Base64.URL_SAFE or android.util.Base64.NO_WRAP
+    )
+
+private fun decodeStoredText(value: String): String {
+    if (!value.startsWith("b64:")) return value
+    return runCatching {
+        String(
+            android.util.Base64.decode(
+                value.removePrefix("b64:"),
+                android.util.Base64.URL_SAFE or android.util.Base64.NO_WRAP
+            ),
+            Charsets.UTF_8
+        )
+    }.getOrDefault(value)
+}
+
 private fun loadTasks(p: android.content.SharedPreferences): List<TaskItem> =
-    p.getString("tasks", "")!!.lines().filter { it.contains("|") }.map { TaskItem(it.substringAfter("|"), it.substringBefore("|") == "1") }
+    p.getString("tasks", "")!!.lines().filter { it.contains("|") }.map { TaskItem(decodeStoredText(it.substringAfter("|")), it.substringBefore("|") == "1") }
 private fun loadHabits(p: android.content.SharedPreferences): List<HabitItem> =
-    p.getString("habits", "")!!.lines().filter { it.contains("|") }.map { HabitItem(it.substringAfter("|"), it.substringBefore("|") == "1") }
+    p.getString("habits", "")!!.lines().filter { it.contains("|") }.map { HabitItem(decodeStoredText(it.substringAfter("|")), it.substringBefore("|") == "1") }
 private fun loadMoney(p: android.content.SharedPreferences): List<MoneyItem> =
     p.getString("money", "")!!.lines().filter { it.count { c -> c == '|' } >= 2 }.mapNotNull {
-        val a = it.split("|", limit = 3); MoneyItem(a[2], a[1].toDoubleOrNull() ?: return@mapNotNull null, a[0] == "I")
+        val a = it.split("|", limit = 3); MoneyItem(decodeStoredText(a[2]), a[1].toDoubleOrNull() ?: return@mapNotNull null, a[0] == "I")
     }
 
 private fun parseCsvLine(line: String): List<String> {
