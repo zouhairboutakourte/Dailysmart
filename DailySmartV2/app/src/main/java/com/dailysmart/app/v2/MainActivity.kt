@@ -85,6 +85,22 @@ fun DailySmartApp() {
         }.onFailure { info = "Could not read CSV file." }
     }
 
+    val xlsxExportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")) { uri ->
+        if (uri != null) runCatching {
+            context.contentResolver.openOutputStream(uri)?.use { it.write(ExcelWorkbook.exportFinance(money)) }
+            info = "Excel workbook exported successfully."
+        }.onFailure { info = "XLSX export failed: ${it.localizedMessage}" }
+    }
+    val xlsxImportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        if (uri != null) runCatching {
+            val bytes = context.contentResolver.openInputStream(uri)!!.use { it.readBytes() }
+            val imported = ExcelWorkbook.importFinance(bytes)
+            money = money + imported
+            saveMoney()
+            info = "${imported.size} Excel rows imported."
+        }.onFailure { info = "Could not import workbook: ${it.localizedMessage}" }
+    }
+
     MaterialTheme(colorScheme = darkColorScheme(background = Navy, surface = Panel, primary = Accent, onBackground = White, onSurface = White)) {
         Scaffold(containerColor = Navy, bottomBar = {
             NavigationBar(containerColor = Panel) {
@@ -220,7 +236,7 @@ fun DailySmartApp() {
                                 Text("Your tasks, habits and finance records are stored locally on this device.", color = White)
                                 Text("Privacy", color = Muted, fontSize = 12.sp)
                                 Text("No ads. No account required. No AI API key is embedded in this APK.", color = White)
-                                Text("AI connection and XLSX workbook support are not enabled in this build.", color = Accent, fontSize = 12.sp)
+                                Text("Online AI is not connected yet. XLSX finance import/export is available.", color = Accent, fontSize = 12.sp)
                             }
                         }
                     }
@@ -230,13 +246,16 @@ fun DailySmartApp() {
                             Column(Modifier.padding(16.dp)) {
                                 Icon(Icons.Default.TableChart, null, tint = Accent, modifier = Modifier.size(30.dp))
                                 Text("Excel companion", fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                                Text("CSV import and export are enabled in this first build. XLSX workbook editing, formulas, charts and AI spreadsheet analysis are planned for the next development milestone.", color = Muted, fontSize = 13.sp)
+                                Text("Import and export .xlsx finance workbooks, or use CSV for simple data exchange. This version handles transaction type, description and amount; it does not edit arbitrary workbook formulas or charts.", color = Muted, fontSize = 13.sp)
                                 Spacer(Modifier.height(14.dp))
                                 Button(onClick = { exportLauncher.launch("dailysmart-finance.csv") }, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Default.FileDownload, null); Spacer(Modifier.width(8.dp)); Text("Export finance to CSV") }
                                 OutlinedButton(onClick = { importLauncher.launch("text/*") }, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Default.FileUpload, null); Spacer(Modifier.width(8.dp)); Text("Import finance CSV") }
+                                Spacer(Modifier.height(8.dp))
+                                Button(onClick = { xlsxExportLauncher.launch("dailysmart-finance.xlsx") }, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Default.FileDownload, null); Spacer(Modifier.width(8.dp)); Text("Export Excel workbook (.xlsx)") }
+                                OutlinedButton(onClick = { xlsxImportLauncher.launch("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet") }, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Default.FileUpload, null); Spacer(Modifier.width(8.dp)); Text("Import Excel workbook (.xlsx)") }
                             }
                         }
-                        Text("Supported file format: CSV · Currency: MAD", color = Muted, fontSize = 12.sp)
+                        Text("Supported formats: XLSX and CSV · Currency: MAD", color = Muted, fontSize = 12.sp)
                     }
                 }
                 Spacer(Modifier.height(12.dp))
