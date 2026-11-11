@@ -264,6 +264,7 @@ fun DailySmartApp() {
                         Text(uiText(language, "${tasks.count { it.done }} of ${tasks.size} tasks completed", "${tasks.count { it.done }} sur ${tasks.size} tâches terminées", "أكملت ${tasks.count { it.done }} من أصل ${tasks.size} مهام"), color = Muted, fontSize = 12.sp)
                         LinearProgressIndicator(progress = { doneRatio }, modifier = Modifier.fillMaxWidth().height(6.dp).clip(CircleShape), color = Lavender, trackColor = PanelRaised)
                         Spacer(Modifier.height(8.dp))
+                        if (tasks.isEmpty()) Text(uiText(language, "No tasks yet. Add one above to get started.", "Aucune tâche pour le moment. Ajoutez-en une ci-dessus.", "ما كايناش مهام دابا. زيد أول مهمة من الفوق."), color = Muted, fontSize = 13.sp, modifier = Modifier.padding(vertical = 14.dp))
                         LazyColumn(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             itemsIndexed(tasks) { i, item ->
                                 Card(colors = CardDefaults.cardColors(containerColor = Panel)) {
@@ -288,6 +289,7 @@ fun DailySmartApp() {
                             Button(onClick = { val a = newAmount.toDoubleOrNull(); if (a != null && a > 0) { money = money + MoneyItem(newTitle.ifBlank { "Income" }, a, true); saveMoney(); newTitle = ""; newAmount = "" } }, modifier = Modifier.weight(1f)) { Text(uiText(language, "Add income", "Ajouter un revenu", "إضافة مدخول")) }
                             OutlinedButton(onClick = { val a = newAmount.toDoubleOrNull(); if (a != null && a > 0) { money = money + MoneyItem(newTitle.ifBlank { "Expense" }, a, false); saveMoney(); newTitle = ""; newAmount = "" } }, modifier = Modifier.weight(1f)) { Text(uiText(language, "Add expense", "Ajouter une dépense", "إضافة مصروف")) }
                         }
+                        if (money.isEmpty()) Text(uiText(language, "No transactions yet. Add your first income or expense.", "Aucune opération pour le moment.", "ما كايناش عمليات مالية دابا. زيد أول مدخول أو مصروف."), color = Muted, fontSize = 13.sp, modifier = Modifier.padding(vertical = 14.dp))
                         LazyColumn(modifier = Modifier.weight(1f)) { itemsIndexed(money.reversed()) { index, item -> ListItem(headlineContent = { Text(item.title) }, supportingContent = { Text(if(item.income) uiText(language, "Income", "Revenu", "مدخول") else uiText(language, "Expense", "Dépense", "مصروف"), color = Muted) }, trailingContent = { Row(verticalAlignment = Alignment.CenterVertically) { Text("${if(item.income) "+" else "-"}${item.amount} DH", color = if(item.income) Accent else ExpenseColor, fontWeight = FontWeight.Bold); IconButton(onClick = { val originalIndex = money.lastIndex - index; money = money.toMutableList().also { it.removeAt(originalIndex) }; saveMoney() }) { Icon(Icons.Default.Delete, uiText(language, "Delete", "Supprimer", "حذف"), tint = Muted) } } }, colors = ListItemDefaults.colors(containerColor = Panel)) } }
                     }
                     "Habits" -> {
@@ -302,6 +304,7 @@ fun DailySmartApp() {
                         Spacer(Modifier.height(10.dp))
                         OutlinedTextField(value = newHabit, onValueChange = { newHabit = it }, modifier = Modifier.fillMaxWidth(), placeholder = { Text(uiText(language, "New daily habit", "Nouvelle habitude", "عادة يومية جديدة")) }, singleLine = true)
                         Button(onClick = { if (newHabit.isNotBlank()) { habits = habits + HabitItem(newHabit.trim()); saveHabits(); newHabit = "" } }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(14.dp)) { Icon(Icons.Default.Add, null); Spacer(Modifier.width(7.dp)); Text(uiText(language, "Add habit", "Ajouter une habitude", "إضافة عادة")) }
+                        if (habits.isEmpty()) Text(uiText(language, "No habits yet. Add one small daily habit.", "Aucune habitude pour le moment.", "ما كايناش عادات دابا. زيد عادة صغيرة كل نهار."), color = Muted, fontSize = 13.sp, modifier = Modifier.padding(vertical = 14.dp))
                         LazyColumn(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             itemsIndexed(habits) { i, habit ->
                                 Card(colors = CardDefaults.cardColors(containerColor = Panel)) {
