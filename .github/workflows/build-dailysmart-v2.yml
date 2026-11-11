@@ -3,7 +3,10 @@ on:
   push:
     branches: [dev]
     paths:
-      - 'DailySmartV2/**'
+      - 'DailySmartV2/app/**'
+      - 'DailySmartV2/build.gradle.kts'
+      - 'DailySmartV2/settings.gradle.kts'
+      - 'DailySmartV2/gradle.properties'
       - '.github/workflows/build-dailysmart-v2.yml'
   workflow_dispatch:
 concurrency:
