@@ -4,6 +4,7 @@ import android.util.Xml
 import org.xmlpull.v1.XmlPullParser
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
+import java.io.InputStream
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
@@ -13,6 +14,27 @@ import java.util.zip.ZipOutputStream
  * Uses Android's built-in ZIP and XML APIs; no third-party library or network required.
  */
 object ExcelWorkbook {
+    // Defensive limits for user-selected workbooks. XLSX is a ZIP container, so
+    // bound both the uploaded file and the expanded XML entries to resist ZIP bombs.
+    private const val MAX_INPUT_BYTES = 10 * 1024 * 1024
+    private const val MAX_ENTRY_BYTES = 5 * 1024 * 1024
+    private const val MAX_TOTAL_UNCOMPRESSED_BYTES = 10 * 1024 * 1024
+    private const val MAX_ZIP_ENTRIES = 64
+
+    fun readBounded(input: InputStream): ByteArray {
+        val output = ByteArrayOutputStream()
+        val buffer = ByteArray(8 * 1024)
+        var total = 0
+        while (true) {
+            val count = input.read(buffer)
+            if (count < 0) break
+            total += count
+            require(total <= MAX_INPUT_BYTES) { "File is too large. Maximum supported size is 10 MB." }
+            output.write(buffer, 0, count)
+        }
+        return output.toByteArray()
+    }
+
     fun exportFinance(items: List<MoneyItem>): ByteArray {
         val out = ByteArrayOutputStream()
         ZipOutputStream(out).use { zip ->
@@ -53,11 +75,32 @@ object ExcelWorkbook {
     }
 
     fun importFinance(bytes: ByteArray): List<MoneyItem> {
+        require(bytes.isNotEmpty()) { "The selected workbook is empty." }
+        require(bytes.size <= MAX_INPUT_BYTES) { "Workbook is too large. Maximum supported size is 10 MB." }
+
         val entries = mutableMapOf<String, ByteArray>()
+        var entryCount = 0
+        var totalExpanded = 0L
         ZipInputStream(ByteArrayInputStream(bytes)).use { zip ->
             while (true) {
                 val entry = zip.nextEntry ?: break
-                if (!entry.isDirectory) entries[entry.name] = zip.readBytes()
+                entryCount++
+                require(entryCount <= MAX_ZIP_ENTRIES) { "Workbook contains too many internal files." }
+                if (!entry.isDirectory) {
+                    val content = ByteArrayOutputStream()
+                    val buffer = ByteArray(8 * 1024)
+                    var entryBytes = 0
+                    while (true) {
+                        val count = zip.read(buffer)
+                        if (count < 0) break
+                        entryBytes += count
+                        totalExpanded += count
+                        require(entryBytes <= MAX_ENTRY_BYTES) { "Workbook contains an oversized internal file." }
+                        require(totalExpanded <= MAX_TOTAL_UNCOMPRESSED_BYTES) { "Workbook expands beyond the 10 MB safety limit." }
+                        content.write(buffer, 0, count)
+                    }
+                    entries[entry.name] = content.toByteArray()
+                }
                 zip.closeEntry()
             }
         }
@@ -73,7 +116,7 @@ object ExcelWorkbook {
         return rows.drop(1).mapNotNull { row ->
             val amount = row.getOrNull(amountCol)?.replace(",", ".")?.replace(Regex("[^0-9.\\-]"), "")?.toDoubleOrNull()
                 ?: return@mapNotNull null
-            if (amount <= 0.0) return@mapNotNull null
+            if (!amount.isFinite() || amount <= 0.0) return@mapNotNull null
             val type = row.getOrNull(typeCol).orEmpty().lowercase()
             val income = type.contains("income") || type.contains("revenu") || type.contains("دخل") || type.contains("recette")
             val description = row.getOrNull(descriptionCol).orEmpty().ifBlank { if (income) "Income" else "Expense" }
