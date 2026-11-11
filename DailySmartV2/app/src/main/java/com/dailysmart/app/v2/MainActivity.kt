@@ -80,7 +80,7 @@ fun DailySmartApp() {
     var command by remember { mutableStateOf("") }
     var newTitle by remember { mutableStateOf("") }
     var newAmount by remember { mutableStateOf("") }
-    var info by remember { mutableStateOf("Your personal workspace is ready.") }
+    var info by remember { mutableStateOf(uiText(language, "Your personal workspace is ready.", "Votre espace est prêt.", "مساحتك الشخصية واجدة.")) }
     var pendingRestore by remember { mutableStateOf<BackupCodec.Snapshot?>(null) }
 
     val backupLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
@@ -218,20 +218,20 @@ fun DailySmartApp() {
                                 is AssistantAction.AddTask -> {
                                     tasks = tasks + TaskItem(action.title)
                                     saveTasks()
-                                    info = "Task added: ${action.title}"
+                                    info = "${uiText(language, "Task added", "Tâche ajoutée", "تمت إضافة المهمة")}: ${action.title}"
                                 }
                                 is AssistantAction.AddMoney -> {
                                     money = money + MoneyItem(action.description, action.amount, action.income)
                                     saveMoney()
-                                    info = "${if (action.income) "Income" else "Expense"} recorded: ${action.amount} MAD"
+                                    info = "${if (action.income) uiText(language, "Income", "Revenu", "مدخول") else uiText(language, "Expense", "Dépense", "مصروف")} ${uiText(language, "recorded", "enregistré", "تسجل")}: ${action.amount} MAD"
                                 }
                                 AssistantAction.FinanceReport -> {
                                     val totalIncome = money.filter { it.income }.sumOf { it.amount }
                                     val totalExpense = money.filterNot { it.income }.sumOf { it.amount }
                                     val balance = totalIncome - totalExpense
-                                    info = "Finance report · Income: ${"%.2f".format(totalIncome)} MAD · Expenses: ${"%.2f".format(totalExpense)} MAD · Balance: ${"%.2f".format(balance)} MAD"
+                                    info = "${uiText(language, "Finance report", "Rapport financier", "التقرير المالي")} · ${uiText(language, "Income", "Revenu", "المداخيل")}: ${"%.2f".format(totalIncome)} MAD · ${uiText(language, "Expenses", "Dépenses", "المصاريف")}: ${"%.2f".format(totalExpense)} MAD · ${uiText(language, "Balance", "Solde", "الرصيد")}: ${"%.2f".format(balance)} MAD"
                                 }
-                                AssistantAction.Help -> info = AssistantEngine.helpText()
+                                AssistantAction.Help -> info = uiText(language, AssistantEngine.helpText(), "Exemples : ajouter tâche appeler la banque · dépense 50 café · revenu 8000 salaire · bilan. Assistant local hors ligne.", "أمثلة: زيد مهمة الاتصال بالبنك · سجل مصروف 50 قهوة · سجل دخل 8000 راتب · تقرير مالي. المساعد يعمل محلياً دون إنترنت.")
                             }
                             command = ""
                         }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(14.dp)) { Icon(Icons.Default.Send, null); Spacer(Modifier.width(8.dp)); Text(uiText(language, "Run command", "Exécuter", "تنفيذ الأمر")) }
@@ -286,8 +286,8 @@ fun DailySmartApp() {
                         OutlinedTextField(value = newTitle, onValueChange = { newTitle = it }, modifier = Modifier.fillMaxWidth(), placeholder = { Text(uiText(language, "Description", "Description", "الوصف")) }, singleLine = true)
                         OutlinedTextField(value = newAmount, onValueChange = { newAmount = it }, modifier = Modifier.fillMaxWidth(), placeholder = { Text(uiText(language, "Amount in MAD", "Montant en MAD", "المبلغ بالدرهم")) }, singleLine = true)
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Button(onClick = { val a = newAmount.toDoubleOrNull(); if (a != null && a > 0) { money = money + MoneyItem(newTitle.ifBlank { "Income" }, a, true); saveMoney(); newTitle = ""; newAmount = "" } }, modifier = Modifier.weight(1f)) { Text(uiText(language, "Add income", "Ajouter un revenu", "إضافة مدخول")) }
-                            OutlinedButton(onClick = { val a = newAmount.toDoubleOrNull(); if (a != null && a > 0) { money = money + MoneyItem(newTitle.ifBlank { "Expense" }, a, false); saveMoney(); newTitle = ""; newAmount = "" } }, modifier = Modifier.weight(1f)) { Text(uiText(language, "Add expense", "Ajouter une dépense", "إضافة مصروف")) }
+                            Button(onClick = { val a = newAmount.replace(",", ".").toDoubleOrNull(); if (a != null && a.isFinite() && a > 0) { money = money + MoneyItem(newTitle.ifBlank { "Income" }, a, true); saveMoney(); newTitle = ""; newAmount = "" } else { info = uiText(language, "Enter a valid amount greater than zero.", "Saisissez un montant valide supérieur à zéro.", "دخل مبلغ صحيح أكبر من صفر.") } }, modifier = Modifier.weight(1f)) { Text(uiText(language, "Add income", "Ajouter un revenu", "إضافة مدخول")) }
+                            OutlinedButton(onClick = { val a = newAmount.replace(",", ".").toDoubleOrNull(); if (a != null && a.isFinite() && a > 0) { money = money + MoneyItem(newTitle.ifBlank { "Expense" }, a, false); saveMoney(); newTitle = ""; newAmount = "" } else { info = uiText(language, "Enter a valid amount greater than zero.", "Saisissez un montant valide supérieur à zéro.", "دخل مبلغ صحيح أكبر من صفر.") } }, modifier = Modifier.weight(1f)) { Text(uiText(language, "Add expense", "Ajouter une dépense", "إضافة مصروف")) }
                         }
                         if (money.isEmpty()) Text(uiText(language, "No transactions yet. Add your first income or expense.", "Aucune opération pour le moment.", "ما كايناش عمليات مالية دابا. زيد أول مدخول أو مصروف."), color = Muted, fontSize = 13.sp, modifier = Modifier.padding(vertical = 14.dp))
                         LazyColumn(modifier = Modifier.weight(1f)) { itemsIndexed(money.reversed()) { index, item -> ListItem(headlineContent = { Text(item.title) }, supportingContent = { Text(if(item.income) uiText(language, "Income", "Revenu", "مدخول") else uiText(language, "Expense", "Dépense", "مصروف"), color = Muted) }, trailingContent = { Row(verticalAlignment = Alignment.CenterVertically) { Text("${if(item.income) "+" else "-"}${item.amount} DH", color = if(item.income) Accent else ExpenseColor, fontWeight = FontWeight.Bold); IconButton(onClick = { val originalIndex = money.lastIndex - index; money = money.toMutableList().also { it.removeAt(originalIndex) }; saveMoney() }) { Icon(Icons.Default.Delete, uiText(language, "Delete", "Supprimer", "حذف"), tint = Muted) } } }, colors = ListItemDefaults.colors(containerColor = Panel)) } }
