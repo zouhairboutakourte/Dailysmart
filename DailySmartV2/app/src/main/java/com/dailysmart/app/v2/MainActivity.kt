@@ -76,8 +76,8 @@ fun DailySmartApp() {
         if (uri != null) runCatching {
             val rows = context.contentResolver.openInputStream(uri)!!.bufferedReader().readLines().drop(1)
             val imported = rows.mapNotNull { line ->
-                val p = line.split(",")
-                if (p.size >= 3) MoneyItem(p[1].trim().trim('"'), p[2].toDoubleOrNull() ?: return@mapNotNull null, p[0].contains("income", true)) else null
+                val p = parseCsvLine(line)
+                if (p.size >= 3) MoneyItem(p[1].trim().trim('"'), p[2].toDoubleOrNull() ?: return@mapNotNull null, listOf("income", "revenu", "recette", "دخل").any { p[0].contains(it, true) }) else null
             }
             money = money + imported
             saveMoney()
@@ -295,3 +295,28 @@ private fun loadMoney(p: android.content.SharedPreferences): List<MoneyItem> =
     p.getString("money", "")!!.lines().filter { it.count { c -> c == '|' } >= 2 }.mapNotNull {
         val a = it.split("|", limit = 3); MoneyItem(a[2], a[1].toDoubleOrNull() ?: return@mapNotNull null, a[0] == "I")
     }
+
+private fun parseCsvLine(line: String): List<String> {
+    val fields = mutableListOf<String>()
+    val current = StringBuilder()
+    var quoted = false
+    var index = 0
+    while (index < line.length) {
+        val char = line[index]
+        when {
+            char == '"' && quoted && index + 1 < line.length && line[index + 1] == '"' -> {
+                current.append('"')
+                index++
+            }
+            char == '"' -> quoted = !quoted
+            char == ',' && !quoted -> {
+                fields += current.toString()
+                current.clear()
+            }
+            else -> current.append(char)
+        }
+        index++
+    }
+    fields += current.toString()
+    return fields
+}
