@@ -116,9 +116,8 @@ fun DailySmartApp() {
     val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         if (uri != null) runCatching {
             val csvText = context.contentResolver.openInputStream(uri)?.use { readBoundedText(it, 5 * 1024 * 1024, "CSV") } ?: throw IllegalStateException("Could not open CSV file.")
-            val rows = csvText.lineSequence().drop(1).toList()
-            val imported = rows.mapNotNull { line ->
-                val p = parseCsvLine(line)
+            val rows = parseCsv(csvText).drop(1)
+            val imported = rows.mapNotNull { p ->
                 if (p.size >= 3) {
                     val amount = p[2].trim().toDoubleOrNull() ?: return@mapNotNull null
                     if (!amount.isFinite() || amount <= 0.0) return@mapNotNull null
@@ -152,8 +151,8 @@ fun DailySmartApp() {
         pendingRestore?.let { snapshot ->
             AlertDialog(
                 onDismissRequest = { pendingRestore = null },
-                title = { Text("Restore DailySmart backup?") },
-                text = { Text("This replaces current tasks, finance records and habits with the backup. Export a backup first if you want to keep the current data.") },
+                title = { Text(uiText(language, "Restore DailySmart backup?", "Restaurer la sauvegarde DailySmart ?", "استرجاع نسخة DailySmart الاحتياطية؟")) },
+                text = { Text(uiText(language, "This replaces current tasks, finance records and habits with the backup. Export a backup first if you want to keep the current data.", "Cette action remplace les tâches, finances et habitudes actuelles. Créez une sauvegarde avant de continuer si nécessaire.", "سيتم تعويض المهام والمصاريف والعادات الحالية بمحتوى النسخة. أنشئ نسخة احتياطية أولاً إذا أردت الاحتفاظ ببياناتك.")) },
                 confirmButton = {
                     TextButton(onClick = {
                         tasks = snapshot.tasks
@@ -162,9 +161,9 @@ fun DailySmartApp() {
                         saveTasks(); saveMoney(); saveHabits()
                         pendingRestore = null
                         info = "Backup restored successfully."
-                    }) { Text("Restore") }
+                    }) { Text(uiText(language, "Restore", "Restaurer", "استرجاع")) }
                 },
-                dismissButton = { TextButton(onClick = { pendingRestore = null }) { Text("Cancel") } }
+                dismissButton = { TextButton(onClick = { pendingRestore = null }) { Text(uiText(language, "Cancel", "Annuler", "إلغاء")) } }
             )
         }
         Scaffold(containerColor = Color.Transparent, bottomBar = {
@@ -189,7 +188,7 @@ fun DailySmartApp() {
                             Spacer(Modifier.height(6.dp))
                             Text(uiText(language, "Your day, under control.", "Votre journée, bien organisée.", "نهارك منظم وتحت السيطرة."), color = White, fontSize = 21.sp, fontWeight = FontWeight.ExtraBold)
                             Spacer(Modifier.height(5.dp))
-                            Text(SimpleDateFormat("EEEE, d MMMM", Locale.getDefault()).format(Date()), color = Color(0xFFD0D9EC), fontSize = 12.sp)
+                            Text(SimpleDateFormat("EEEE, d MMMM", Locale.forLanguageTag(language)).format(Date()), color = Color(0xFFD0D9EC), fontSize = 12.sp)
                         }
                         Box(Modifier.size(54.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.12f)), contentAlignment = Alignment.Center) {
                             Icon(Icons.Default.Bolt, null, tint = Gold, modifier = Modifier.size(30.dp))
@@ -281,15 +280,15 @@ fun DailySmartApp() {
                         val income = money.filter { it.income }.sumOf { it.amount }
                         val expense = money.filterNot { it.income }.sumOf { it.amount }
                         Text(uiText(language, "PERSONAL FINANCE", "FINANCES PERSONNELLES", "المالية الشخصية"), color = Muted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) { SummaryCard("Income", "${"%.2f".format(income)} DH", Modifier.weight(1f), Accent); SummaryCard("Expenses", "${"%.2f".format(expense)} DH", Modifier.weight(1f), ExpenseColor) }
-                        SummaryCard("Available balance", "${"%.2f".format(income-expense)} DH", Modifier.fillMaxWidth())
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) { SummaryCard(uiText(language, "Income", "Revenu", "المدخول"), "${"%.2f".format(income)} DH", Modifier.weight(1f), Accent); SummaryCard(uiText(language, "Expenses", "Dépenses", "المصاريف"), "${"%.2f".format(expense)} DH", Modifier.weight(1f), ExpenseColor) }
+                        SummaryCard(uiText(language, "Available balance", "Solde disponible", "الرصيد المتاح"), "${"%.2f".format(income-expense)} DH", Modifier.fillMaxWidth())
                         OutlinedTextField(value = newTitle, onValueChange = { newTitle = it }, modifier = Modifier.fillMaxWidth(), placeholder = { Text(uiText(language, "Description", "Description", "الوصف")) }, singleLine = true)
                         OutlinedTextField(value = newAmount, onValueChange = { newAmount = it }, modifier = Modifier.fillMaxWidth(), placeholder = { Text(uiText(language, "Amount in MAD", "Montant en MAD", "المبلغ بالدرهم")) }, singleLine = true)
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             Button(onClick = { val a = newAmount.toDoubleOrNull(); if (a != null && a > 0) { money = money + MoneyItem(newTitle.ifBlank { "Income" }, a, true); saveMoney(); newTitle = ""; newAmount = "" } }, modifier = Modifier.weight(1f)) { Text(uiText(language, "Add income", "Ajouter un revenu", "إضافة مدخول")) }
                             OutlinedButton(onClick = { val a = newAmount.toDoubleOrNull(); if (a != null && a > 0) { money = money + MoneyItem(newTitle.ifBlank { "Expense" }, a, false); saveMoney(); newTitle = ""; newAmount = "" } }, modifier = Modifier.weight(1f)) { Text(uiText(language, "Add expense", "Ajouter une dépense", "إضافة مصروف")) }
                         }
-                        LazyColumn(modifier = Modifier.weight(1f)) { itemsIndexed(money.reversed()) { _, item -> ListItem(headlineContent = { Text(item.title) }, supportingContent = { Text(if(item.income) uiText(language, "Income", "Revenu", "مدخول") else uiText(language, "Expense", "Dépense", "مصروف"), color = Muted) }, trailingContent = { Text("${if(item.income) "+" else "-"}${item.amount} DH", color = if(item.income) Accent else ExpenseColor, fontWeight = FontWeight.Bold) }, colors = ListItemDefaults.colors(containerColor = Panel)) } }
+                        LazyColumn(modifier = Modifier.weight(1f)) { itemsIndexed(money.reversed()) { index, item -> ListItem(headlineContent = { Text(item.title) }, supportingContent = { Text(if(item.income) uiText(language, "Income", "Revenu", "مدخول") else uiText(language, "Expense", "Dépense", "مصروف"), color = Muted) }, trailingContent = { Row(verticalAlignment = Alignment.CenterVertically) { Text("${if(item.income) "+" else "-"}${item.amount} DH", color = if(item.income) Accent else ExpenseColor, fontWeight = FontWeight.Bold); IconButton(onClick = { val originalIndex = money.lastIndex - index; money = money.toMutableList().also { it.removeAt(originalIndex) }; saveMoney() }) { Icon(Icons.Default.Delete, uiText(language, "Delete", "Supprimer", "حذف"), tint = Muted) } } }, colors = ListItemDefaults.colors(containerColor = Panel)) } }
                     }
                     "Habits" -> {
                         Text(uiText(language, "DAILY HABITS", "HABITUDES QUOTIDIENNES", "العادات اليومية"), color = Muted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
@@ -451,29 +450,31 @@ private fun loadMoney(p: android.content.SharedPreferences): List<MoneyItem> =
         val a = it.split("|", limit = 3); MoneyItem(decodeStoredText(a[2]), a[1].toDoubleOrNull() ?: return@mapNotNull null, a[0] == "I")
     }
 
-private fun parseCsvLine(line: String): List<String> {
-    val fields = mutableListOf<String>()
-    val current = StringBuilder()
+private fun parseCsv(text: String): List<List<String>> {
+    val rows = mutableListOf<List<String>>()
+    var row = mutableListOf<String>()
+    val field = StringBuilder()
     var quoted = false
     var index = 0
-    while (index < line.length) {
-        val char = line[index]
+    while (index < text.length) {
+        val char = text[index]
         when {
-            char == '"' && quoted && index + 1 < line.length && line[index + 1] == '"' -> {
-                current.append('"')
-                index++
-            }
+            char == '"' && quoted && index + 1 < text.length && text[index + 1] == '"' -> { field.append('"'); index++ }
             char == '"' -> quoted = !quoted
-            char == ',' && !quoted -> {
-                fields += current.toString()
-                current.clear()
+            char == ',' && !quoted -> { row.add(field.toString()); field.setLength(0) }
+            (char == '\\n' || char == '\\r') && !quoted -> {
+                row.add(field.toString()); field.setLength(0)
+                if (row.any { it.isNotBlank() }) rows.add(row)
+                row = mutableListOf()
+                if (char == '\\r' && index + 1 < text.length && text[index + 1] == '\\n') index++
             }
-            else -> current.append(char)
+            else -> field.append(char)
         }
         index++
     }
-    fields += current.toString()
-    return fields
+    if (field.isNotEmpty() || row.isNotEmpty()) { row.add(field.toString()); if (row.any { it.isNotBlank() }) rows.add(row) }
+    require(!quoted) { "CSV contains an unterminated quoted field." }
+    return rows
 }
 
 
