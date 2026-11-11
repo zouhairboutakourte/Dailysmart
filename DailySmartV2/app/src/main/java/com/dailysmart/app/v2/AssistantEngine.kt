@@ -19,7 +19,7 @@ object AssistantEngine {
         val taskPrefixes = listOf(
             "add task", "create task", "new task", "ajouter tâche", "ajoute tâche",
             "ajouter une tâche", "ajoute une tâche", "زيد مهمة", "زيد ليا مهمة",
-            "أضف مهمة", "مهمة جديدة"
+            "أضف مهمة", "مهمة جديدة", "zid mohimma", "zid task", "sajel mohimma", "sajel liya mohimma"
         )
         taskPrefixes.firstOrNull { lower.startsWith(it) }?.let { prefix ->
             val title = input.drop(prefix.length).trim().trimStart(':', '-', ' ')
@@ -33,7 +33,7 @@ object AssistantEngine {
             Triple("dépense", false, "dépense"), Triple("depense", false, "depense"),
             Triple("income", true, "income"), Triple("salary", true, "salary"),
             Triple("دخل", true, "دخل"), Triple("سجل دخل", true, "سجل دخل"),
-            Triple("revenu", true, "revenu"), Triple("recette", true, "recette")
+            Triple("revenu", true, "revenu"), Triple("recette", true, "recette"),\n            Triple("masrouf", false, "masrouf"), Triple("sajel masrouf", false, "sajel masrouf"),\n            Triple("sarf", false, "sarf"), Triple("dkhl", true, "dkhl"), Triple("dakhl", true, "dakhl"),\n            Triple("sajel dakhl", true, "sajel dakhl"), Triple("dkhol", true, "dkhol")
         )
         for ((prefix, isIncome, _) in moneyPrefixes.sortedByDescending { it.first.length }) {
             if (lower.startsWith(prefix)) {
@@ -50,7 +50,7 @@ object AssistantEngine {
             }
         }
 
-        if (listOf("report", "finance report", "bilan", "rapport", "تقرير", "تقرير مالي", "الحساب").any { lower == it }) {
+        if (listOf("report", "finance report", "bilan", "rapport", "تقرير", "تقرير مالي", "الحساب", "7sab", "7ssab", "7sab dyali", "ch7al sraft").any { lower == it }) {
             return AssistantAction.FinanceReport
         }
         return AssistantAction.Help
