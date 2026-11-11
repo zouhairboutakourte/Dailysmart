@@ -31,7 +31,7 @@ jobs:
           packages: platform-tools platforms;android-35 build-tools;35.0.0
       - name: Build standalone V2 APK
         working-directory: DailySmartV2
-        run: gradle :app:assembleDebug --stacktrace
+        run: gradle :app:testDebugUnitTest :app:assembleDebug --stacktrace
       - name: Verify package and APK
         working-directory: DailySmartV2
         run: |
