@@ -238,8 +238,8 @@ fun DailySmartApp() {
                         Spacer(Modifier.height(14.dp))
                         Text(uiText(language, "QUICK OVERVIEW", "APERÇU RAPIDE", "نظرة سريعة"), color = Muted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            SummaryCard("Tasks", "${tasks.count { it.done }}/${tasks.size} done", Modifier.weight(1f), Lavender)
-                            SummaryCard("Balance", "${"%.0f".format(money.sumOf { if (it.income) it.amount else -it.amount })} DH", Modifier.weight(1f), Accent)
+                            SummaryCard(uiText(language, "Tasks", "Tâches", "المهام"), "${tasks.count { it.done }}/${tasks.size} ${uiText(language, "done", "terminées", "مكتملة")}", Modifier.weight(1f), Lavender)
+                            SummaryCard(uiText(language, "Balance", "Solde", "الرصيد"), "${"%.0f".format(money.sumOf { if (it.income) it.amount else -it.amount })} DH", Modifier.weight(1f), Accent)
                         }
                         val taskProgress = if (tasks.isEmpty()) 0f else tasks.count { it.done }.toFloat() / tasks.size
                         Spacer(Modifier.height(8.dp))
@@ -329,7 +329,7 @@ fun DailySmartApp() {
                                 }
                                 Divider(color = Muted.copy(alpha = 0.25f))
                                 Text("DailySmart V2", color = White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                                Text("Version 2.4.0 · Independent Android application", color = Muted, fontSize = 12.sp)
+                                Text(uiText(language, "Version 2.5.0 · Android app", "Version 2.5.0 · Application Android", "الإصدار 2.5.0 · تطبيق أندرويد"), color = Muted, fontSize = 12.sp)
                                 Divider(color = Muted.copy(alpha = 0.25f))
                                 Text(uiText(language, "Currency", "Devise", "العملة"), color = Muted, fontSize = 12.sp)
                                 Text(uiText(language, "Moroccan dirham (MAD)", "Dirham marocain (MAD)", "الدرهم المغربي (MAD)"), color = White)
@@ -337,7 +337,7 @@ fun DailySmartApp() {
                                 Text(uiText(language, "Your tasks, habits and finance records are stored locally on this device.", "Vos tâches, habitudes et finances sont stockées sur cet appareil.", "المهام والعادات والسجلات المالية محفوظة محلياً على هذا الهاتف."), color = White)
                                 Text(uiText(language, "Privacy", "Confidentialité", "الخصوصية"), color = Muted, fontSize = 12.sp)
                                 Text(uiText(language, "No ads. No account required. No AI API key is embedded in this APK.", "Sans publicité ni compte. Aucune clé API IA dans l’application.", "بدون إعلانات أو حساب، ولا توجد مفاتيح ذكاء اصطناعي داخل التطبيق."), color = White)
-                                Text("Online AI is not connected yet. XLSX finance import/export is available.", color = Accent, fontSize = 12.sp)
+                                Text(uiText(language, "Online AI is not connected yet. XLSX finance import/export is available.", "L’IA en ligne n’est pas encore connectée. L’import/export Excel est disponible.", "الذكاء الاصطناعي المتصل بالإنترنت غير مفعّل بعد. استيراد وتصدير Excel متاح."), color = Accent, fontSize = 12.sp)
                                 Divider(color = Muted.copy(alpha = 0.25f))
                                 Text(uiText(language, "Backup & restore", "Sauvegarde et restauration", "النسخ الاحتياطي والاسترجاع"), color = Muted, fontSize = 12.sp)
                                 Text(uiText(language, "Create a portable copy of tasks, finance records and habits. Restoring replaces current data only after confirmation.", "Créez une copie de vos tâches, finances et habitudes. La restauration remplace les données après confirmation.", "أنشئ نسخة من مهامك ومصاريفك وعاداتك. الاسترجاع يعوض البيانات الحالية بعد التأكيد."), color = White, fontSize = 12.sp)
@@ -354,35 +354,35 @@ fun DailySmartApp() {
                         val totalIncome = money.filter { it.income }.sumOf { it.amount }
                         val totalExpense = money.filterNot { it.income }.sumOf { it.amount }
                         val expenseRatio = if (totalIncome > 0.0) (totalExpense / totalIncome).toFloat().coerceIn(0f, 1f) else 0f
-                        Text("SPREADSHEET TOOLS", color = Muted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                        Text("FINANCE SNAPSHOT", color = Muted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Text(uiText(language, "SPREADSHEET TOOLS", "OUTILS TABLEUR", "أدوات الجداول"), color = Muted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Text(uiText(language, "FINANCE SNAPSHOT", "APERÇU FINANCIER", "ملخص المالية"), color = Muted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            SummaryCard("Income", "${"%.0f".format(totalIncome)} DH", Modifier.weight(1f))
-                            SummaryCard("Expenses", "${"%.0f".format(totalExpense)} DH", Modifier.weight(1f))
+                            SummaryCard(uiText(language, "Income", "Revenu", "المدخول"), "${"%.0f".format(totalIncome)} DH", Modifier.weight(1f), Accent)
+                            SummaryCard(uiText(language, "Expenses", "Dépenses", "المصاريف"), "${"%.0f".format(totalExpense)} DH", Modifier.weight(1f), ExpenseColor)
                         }
                         Card(colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(14.dp)) {
                             Column(Modifier.padding(14.dp)) {
-                                Text("Expenses compared with income", color = White, fontWeight = FontWeight.SemiBold)
+                                Text(uiText(language, "Expenses compared with income", "Dépenses par rapport aux revenus", "المصاريف مقارنة بالمداخيل"), color = White, fontWeight = FontWeight.SemiBold)
                                 Spacer(Modifier.height(8.dp))
                                 LinearProgressIndicator(progress = { expenseRatio }, modifier = Modifier.fillMaxWidth(), color = Accent, trackColor = Navy)
                                 Spacer(Modifier.height(6.dp))
-                                Text("${if (totalIncome > 0.0) "%.0f".format(expenseRatio * 100) else "0"}% of recorded income", color = Muted, fontSize = 12.sp)
+                                Text("${if (totalIncome > 0.0) "%.0f".format(expenseRatio * 100) else "0"}% ${uiText(language, "of recorded income", "des revenus enregistrés", "من المداخيل المسجلة")}", color = Muted, fontSize = 12.sp)
                             }
                         }
                         Card(colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(18.dp)) {
                             Column(Modifier.padding(16.dp)) {
                                 Icon(Icons.Default.TableChart, null, tint = Accent, modifier = Modifier.size(30.dp))
-                                Text("Excel companion", fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                                Text("Import and export .xlsx finance workbooks, or use CSV for simple data exchange. This version handles transaction type, description and amount; it does not edit arbitrary workbook formulas or charts.", color = Muted, fontSize = 13.sp)
+                                Text(uiText(language, "Excel companion", "Compagnon Excel", "مساعد Excel"), fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                                Text(uiText(language, "Import and export .xlsx finance workbooks, or use CSV for simple data exchange. This version handles transaction type, description and amount; it does not edit arbitrary workbook formulas or charts.", "Importez et exportez des fichiers financiers .xlsx ou CSV. Cette version gère le type, la description et le montant, mais pas les formules ni les graphiques avancés.", "استورد وصدّر ملفات Excel أو CSV المالية. النسخة الحالية تدعم نوع العملية والوصف والمبلغ، ولا تعدل الصيغ والرسوم البيانية المتقدمة."), color = Muted, fontSize = 13.sp)
                                 Spacer(Modifier.height(14.dp))
-                                Button(onClick = { exportLauncher.launch("dailysmart-finance.csv") }, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Default.FileDownload, null); Spacer(Modifier.width(8.dp)); Text("Export finance to CSV") }
-                                OutlinedButton(onClick = { importLauncher.launch("text/*") }, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Default.FileUpload, null); Spacer(Modifier.width(8.dp)); Text("Import finance CSV") }
+                                Button(onClick = { exportLauncher.launch("dailysmart-finance.csv") }, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Default.FileDownload, null); Spacer(Modifier.width(8.dp)); Text(uiText(language, "Export finance to CSV", "Exporter en CSV", "تصدير CSV")) }
+                                OutlinedButton(onClick = { importLauncher.launch("text/*") }, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Default.FileUpload, null); Spacer(Modifier.width(8.dp)); Text(uiText(language, "Import finance CSV", "Importer CSV", "استيراد CSV")) }
                                 Spacer(Modifier.height(8.dp))
-                                Button(onClick = { xlsxExportLauncher.launch("dailysmart-finance.xlsx") }, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Default.FileDownload, null); Spacer(Modifier.width(8.dp)); Text("Export Excel workbook (.xlsx)") }
-                                OutlinedButton(onClick = { xlsxImportLauncher.launch("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet") }, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Default.FileUpload, null); Spacer(Modifier.width(8.dp)); Text("Import Excel workbook (.xlsx)") }
+                                Button(onClick = { xlsxExportLauncher.launch("dailysmart-finance.xlsx") }, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Default.FileDownload, null); Spacer(Modifier.width(8.dp)); Text(uiText(language, "Export Excel workbook (.xlsx)", "Exporter Excel (.xlsx)", "تصدير Excel (.xlsx)")) }
+                                OutlinedButton(onClick = { xlsxImportLauncher.launch("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet") }, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Default.FileUpload, null); Spacer(Modifier.width(8.dp)); Text(uiText(language, "Import Excel workbook (.xlsx)", "Importer Excel (.xlsx)", "استيراد Excel (.xlsx)")) }
                             }
                         }
-                        Text("Supported formats: XLSX and CSV · Currency: MAD", color = Muted, fontSize = 12.sp)
+                        Text(uiText(language, "Supported formats: XLSX and CSV · Currency: MAD", "Formats : XLSX et CSV · Devise : MAD", "الصيغ المدعومة: XLSX وCSV · العملة: MAD"), color = Muted, fontSize = 12.sp)
                     }
                 }
                 Spacer(Modifier.height(12.dp))
