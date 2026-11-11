@@ -33,7 +33,10 @@ object AssistantEngine {
             Triple("dépense", false, "dépense"), Triple("depense", false, "depense"),
             Triple("income", true, "income"), Triple("salary", true, "salary"),
             Triple("دخل", true, "دخل"), Triple("سجل دخل", true, "سجل دخل"),
-            Triple("revenu", true, "revenu"), Triple("recette", true, "recette"),\n            Triple("masrouf", false, "masrouf"), Triple("sajel masrouf", false, "sajel masrouf"),\n            Triple("sarf", false, "sarf"), Triple("dkhl", true, "dkhl"), Triple("dakhl", true, "dakhl"),\n            Triple("sajel dakhl", true, "sajel dakhl"), Triple("dkhol", true, "dkhol")
+            Triple("revenu", true, "revenu"), Triple("recette", true, "recette"),
+            Triple("masrouf", false, "masrouf"), Triple("sajel masrouf", false, "sajel masrouf"),
+            Triple("sarf", false, "sarf"), Triple("dkhl", true, "dkhl"), Triple("dakhl", true, "dakhl"),
+            Triple("sajel dakhl", true, "sajel dakhl"), Triple("dkhol", true, "dkhol")
         )
         for ((prefix, isIncome, _) in moneyPrefixes.sortedByDescending { it.first.length }) {
             if (lower.startsWith(prefix)) {
