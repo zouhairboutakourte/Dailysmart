@@ -81,6 +81,6 @@ object AssistantEngine {
     }
 
     fun helpText(): String =
-        "Try: add task call the bank · expense 50 lunch · income 8000 salary · report. " +
-        "You can also use French or Arabic commands. This assistant works offline; it is not yet connected to an online AI model."
+        "Try: add task call the bank · sajel masrouf 50 qhwa · sajel dakhl 8000 salaire · ch7al sraft. " +
+        "You can also use Arabic, French and Darija commands. This assistant works offline; it is not yet connected to an online AI model."
 }
