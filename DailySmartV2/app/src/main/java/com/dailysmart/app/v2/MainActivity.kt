@@ -241,7 +241,24 @@ fun DailySmartApp() {
                         }
                     }
                     else -> {
+                        val totalIncome = money.filter { it.income }.sumOf { it.amount }
+                        val totalExpense = money.filterNot { it.income }.sumOf { it.amount }
+                        val expenseRatio = if (totalIncome > 0.0) (totalExpense / totalIncome).toFloat().coerceIn(0f, 1f) else 0f
                         Text("SPREADSHEET TOOLS", color = Muted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Text("FINANCE SNAPSHOT", color = Muted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            SummaryCard("Income", "${"%.0f".format(totalIncome)} DH", Modifier.weight(1f))
+                            SummaryCard("Expenses", "${"%.0f".format(totalExpense)} DH", Modifier.weight(1f))
+                        }
+                        Card(colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(14.dp)) {
+                            Column(Modifier.padding(14.dp)) {
+                                Text("Expenses compared with income", color = White, fontWeight = FontWeight.SemiBold)
+                                Spacer(Modifier.height(8.dp))
+                                LinearProgressIndicator(progress = { expenseRatio }, modifier = Modifier.fillMaxWidth(), color = Accent, trackColor = Navy)
+                                Spacer(Modifier.height(6.dp))
+                                Text("${if (totalIncome > 0.0) "%.0f".format(expenseRatio * 100) else "0"}% of recorded income", color = Muted, fontSize = 12.sp)
+                            }
+                        }
                         Card(colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(18.dp)) {
                             Column(Modifier.padding(16.dp)) {
                                 Icon(Icons.Default.TableChart, null, tint = Accent, modifier = Modifier.size(30.dp))
