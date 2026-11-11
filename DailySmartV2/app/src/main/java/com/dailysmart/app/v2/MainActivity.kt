@@ -17,13 +17,16 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import java.text.SimpleDateFormat
@@ -69,6 +72,11 @@ fun DailySmartApp() {
     var habits by remember { mutableStateOf(database.loadHabitsForToday(todayKey())) }
     var newHabit by remember { mutableStateOf("") }
     var tab by remember { mutableStateOf("Assistant") }
+    var language by remember { mutableStateOf(prefs.getString("language", "ar") ?: "ar") }
+    fun changeLanguage(code: String) {
+        language = code
+        prefs.edit().putString("language", code).apply()
+    }
     var command by remember { mutableStateOf("") }
     var newTitle by remember { mutableStateOf("") }
     var newAmount by remember { mutableStateOf("") }
@@ -140,6 +148,7 @@ fun DailySmartApp() {
     }
 
     MaterialTheme(colorScheme = darkColorScheme(background = Navy, surface = Panel, primary = Accent, onBackground = White, onSurface = White)) {
+      CompositionLocalProvider(LocalLayoutDirection provides if (language == "ar") LayoutDirection.Rtl else LayoutDirection.Ltr) {
         pendingRestore?.let { snapshot ->
             AlertDialog(
                 onDismissRequest = { pendingRestore = null },
@@ -163,7 +172,7 @@ fun DailySmartApp() {
                 listOf("Assistant", "Finance", "Tasks", "Habits", "Excel", "Settings").forEach { name ->
                     NavigationBarItem(selected = tab == name, onClick = { tab = name }, icon = {
                         Icon(when(name) { "Assistant" -> Icons.Default.AutoAwesome; "Finance" -> Icons.Default.AccountBalanceWallet; "Tasks" -> Icons.Default.CheckCircle; "Habits" -> Icons.Default.Favorite; "Excel" -> Icons.Default.TableChart; else -> Icons.Default.Settings }, null)
-                    }, label = { Text(name) }, colors = NavigationBarItemDefaults.colors(selectedIconColor = Accent, selectedTextColor = Accent, indicatorColor = Navy, unselectedTextColor = Muted))
+                    }, label = { Text(uiText(language, name, when(name) { "Assistant" -> "Assistant"; "Finance" -> "Finances"; "Tasks" -> "Tâches"; "Habits" -> "Habitudes"; "Excel" -> "Excel"; else -> "Settings" }, when(name) { "Assistant" -> "المساعد"; "Finance" -> "المالية"; "Tasks" -> "المهام"; "Habits" -> "العادات"; "Excel" -> "إكسيل"; else -> "الإعدادات" })) }, colors = NavigationBarItemDefaults.colors(selectedIconColor = Accent, selectedTextColor = Accent, indicatorColor = Navy, unselectedTextColor = Muted))
                 }
             }
         }) { pad ->
@@ -256,7 +265,7 @@ fun DailySmartApp() {
                         Text("${tasks.count { it.done }} of ${tasks.size} tasks completed", color = Muted, fontSize = 12.sp)
                         LinearProgressIndicator(progress = { doneRatio }, modifier = Modifier.fillMaxWidth().height(6.dp).clip(CircleShape), color = Lavender, trackColor = PanelRaised)
                         Spacer(Modifier.height(8.dp))
-                        LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        LazyColumn(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             itemsIndexed(tasks) { i, item ->
                                 Card(colors = CardDefaults.cardColors(containerColor = Panel)) {
                                     Row(Modifier.fillMaxWidth().clickable { tasks = tasks.toMutableList().also { it[i] = item.copy(done = !item.done) }; saveTasks() }.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -280,7 +289,7 @@ fun DailySmartApp() {
                             Button(onClick = { val a = newAmount.toDoubleOrNull(); if (a != null && a > 0) { money = money + MoneyItem(newTitle.ifBlank { "Income" }, a, true); saveMoney(); newTitle = ""; newAmount = "" } }, modifier = Modifier.weight(1f)) { Text("Add income") }
                             OutlinedButton(onClick = { val a = newAmount.toDoubleOrNull(); if (a != null && a > 0) { money = money + MoneyItem(newTitle.ifBlank { "Expense" }, a, false); saveMoney(); newTitle = ""; newAmount = "" } }, modifier = Modifier.weight(1f)) { Text("Add expense") }
                         }
-                        LazyColumn { itemsIndexed(money.reversed()) { _, item -> ListItem(headlineContent = { Text(item.title) }, supportingContent = { Text(if(item.income) "Income" else "Expense", color = Muted) }, trailingContent = { Text("${if(item.income) "+" else "-"}${item.amount} DH", color = if(item.income) Accent else ExpenseColor, fontWeight = FontWeight.Bold) }, colors = ListItemDefaults.colors(containerColor = Panel)) } }
+                        LazyColumn(modifier = Modifier.weight(1f)) { itemsIndexed(money.reversed()) { _, item -> ListItem(headlineContent = { Text(item.title) }, supportingContent = { Text(if(item.income) "Income" else "Expense", color = Muted) }, trailingContent = { Text("${if(item.income) "+" else "-"}${item.amount} DH", color = if(item.income) Accent else ExpenseColor, fontWeight = FontWeight.Bold) }, colors = ListItemDefaults.colors(containerColor = Panel)) } }
                     }
                     "Habits" -> {
                         Text("DAILY HABITS", color = Muted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
@@ -294,7 +303,7 @@ fun DailySmartApp() {
                         Spacer(Modifier.height(10.dp))
                         OutlinedTextField(value = newHabit, onValueChange = { newHabit = it }, modifier = Modifier.fillMaxWidth(), placeholder = { Text("New daily habit") }, singleLine = true)
                         Button(onClick = { if (newHabit.isNotBlank()) { habits = habits + HabitItem(newHabit.trim()); saveHabits(); newHabit = "" } }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(14.dp)) { Icon(Icons.Default.Add, null); Spacer(Modifier.width(7.dp)); Text("Add habit") }
-                        LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        LazyColumn(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             itemsIndexed(habits) { i, habit ->
                                 Card(colors = CardDefaults.cardColors(containerColor = Panel)) {
                                     Row(Modifier.fillMaxWidth().clickable { habits = habits.toMutableList().also { it[i] = habit.copy(completedToday = !habit.completedToday) }; saveHabits() }.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -312,6 +321,14 @@ fun DailySmartApp() {
                         Text("SETTINGS", color = Muted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         Card(colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(16.dp)) {
                             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                Text(uiText(language, "Language", "Langue", "اللغة"), color = Muted, fontSize = 12.sp)
+                                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    listOf("ar" to "العربية", "fr" to "Français", "en" to "English").forEach { (code, label) ->
+                                        if (language == code) Button(onClick = { changeLanguage(code) }, modifier = Modifier.weight(1f), contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp)) { Text(label, fontSize = 11.sp) }
+                                        else OutlinedButton(onClick = { changeLanguage(code) }, modifier = Modifier.weight(1f), contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp)) { Text(label, fontSize = 11.sp) }
+                                    }
+                                }
+                                Divider(color = Muted.copy(alpha = 0.25f))
                                 Text("DailySmart V2", color = White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
                                 Text("Version 2.4.0 · Independent Android application", color = Muted, fontSize = 12.sp)
                                 Divider(color = Muted.copy(alpha = 0.25f))
@@ -372,7 +389,14 @@ fun DailySmartApp() {
                 Spacer(Modifier.height(12.dp))
             }
         }
+      }
     }
+}
+
+private fun uiText(language: String, english: String, french: String, arabic: String): String = when (language) {
+    "ar" -> arabic
+    "fr" -> french
+    else -> english
 }
 
 @Composable
