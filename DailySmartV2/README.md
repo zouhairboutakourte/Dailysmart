@@ -9,7 +9,7 @@ Independent Android application built with Kotlin and Jetpack Compose.
 - Arabic is the default UI language, with persistent Arabic/French/English selection and RTL layout
 - Localized core navigation, task, finance, habit, backup and spreadsheet screens
 - Empty-state guidance and improved list scrolling
-- CSV parser supports quoted commas, escaped quotes and multiline descriptions; CSV and offline assistant commands have unit tests run before APK packaging
+- CSV parser supports quoted commas, escaped quotes and multiline descriptions; CSV, offline assistant commands and SQLite migration/reset have automated unit tests run before APK packaging
 - Offline assistant commands in English, French and Arabic: create tasks, record income/expenses, and request a finance report (not a connected LLM)
 - Finance ledger: income, expenses and MAD balance
 - Task list: add, complete and delete
@@ -21,7 +21,7 @@ Independent Android application built with Kotlin and Jetpack Compose.
 - No ads, no subscription, no account and no embedded AI API key
 
 ## Not yet implemented
-- Device-level tests for SQLite migration and backup/restore scenarios are still required
+- Real-device validation of backup/restore, upgrade from an older installed APK and performance is still required
 - Real conversational AI / secure backend
 - Editing arbitrary Excel workbooks, formulas and charts; XLSX support currently focuses on DailySmart finance transaction sheets
 - Full Arabic, Darija, French and English interface localization
