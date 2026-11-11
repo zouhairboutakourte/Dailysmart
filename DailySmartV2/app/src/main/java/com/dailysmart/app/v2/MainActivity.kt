@@ -121,7 +121,12 @@ fun DailySmartApp() {
                 if (p.size >= 3) {
                     val amount = p[2].trim().toDoubleOrNull() ?: return@mapNotNull null
                     if (!amount.isFinite() || amount <= 0.0) return@mapNotNull null
-                    MoneyItem(p[1].trim().trim('"'), amount, listOf("income", "revenu", "recette", "دخل").any { p[0].contains(it, true) })
+                    run {
+                        val income = listOf("income", "revenu", "recette", "دخل").any { p[0].contains(it, true) }
+                        val description = p[1].trim().trim('"').ifBlank { if (income) "Income" else "Expense" }
+                        if (description.length > 500) return@mapNotNull null
+                        MoneyItem(description, amount, income)
+                    }
                 } else null
             }
             money = money + imported
@@ -210,7 +215,7 @@ fun DailySmartApp() {
                             }
                         }
                         Spacer(Modifier.height(14.dp))
-                        OutlinedTextField(value = command, onValueChange = { command = it }, modifier = Modifier.fillMaxWidth(), placeholder = { Text(uiText(language, "Ex: add task call the bank", "Ex : ajouter une tâche appeler la banque", "مثال: أضف مهمة الاتصال بالبنك")) }, shape = RoundedCornerShape(16.dp), minLines = 2)
+                        OutlinedTextField(value = command, onValueChange = { if (it.length <= 1500) command = it }, modifier = Modifier.fillMaxWidth(), placeholder = { Text(uiText(language, "Ex: add task call the bank", "Ex : ajouter une tâche appeler la banque", "مثال: أضف مهمة الاتصال بالبنك")) }, shape = RoundedCornerShape(16.dp), minLines = 2)
                         Spacer(Modifier.height(8.dp))
                         Button(onClick = {
                             val c = command.trim()
@@ -258,7 +263,7 @@ fun DailySmartApp() {
                     }
                     "Tasks" -> {
                         Text(uiText(language, "TASKS", "TÂCHES", "المهام"), color = Muted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                        OutlinedTextField(value = newTitle, onValueChange = { newTitle = it }, modifier = Modifier.fillMaxWidth(), placeholder = { Text(uiText(language, "New task", "Nouvelle tâche", "مهمة جديدة")) }, singleLine = true)
+                        OutlinedTextField(value = newTitle, onValueChange = { if (it.length <= 500) newTitle = it }, modifier = Modifier.fillMaxWidth(), placeholder = { Text(uiText(language, "New task", "Nouvelle tâche", "مهمة جديدة")) }, singleLine = true)
                         Button(onClick = { if (newTitle.isNotBlank()) { tasks = tasks + TaskItem(newTitle.trim()); saveTasks(); newTitle = "" } }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(14.dp)) { Icon(Icons.Default.Add, null); Spacer(Modifier.width(7.dp)); Text(uiText(language, "Add task", "Ajouter", "إضافة مهمة")) }
                         val doneRatio = if (tasks.isEmpty()) 0f else tasks.count { it.done }.toFloat() / tasks.size
                         Text(uiText(language, "${tasks.count { it.done }} of ${tasks.size} tasks completed", "${tasks.count { it.done }} sur ${tasks.size} tâches terminées", "أكملت ${tasks.count { it.done }} من أصل ${tasks.size} مهام"), color = Muted, fontSize = 12.sp)
@@ -283,7 +288,7 @@ fun DailySmartApp() {
                         Text(uiText(language, "PERSONAL FINANCE", "FINANCES PERSONNELLES", "المالية الشخصية"), color = Muted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) { SummaryCard(uiText(language, "Income", "Revenu", "المدخول"), "${"%.2f".format(income)} DH", Modifier.weight(1f), Accent); SummaryCard(uiText(language, "Expenses", "Dépenses", "المصاريف"), "${"%.2f".format(expense)} DH", Modifier.weight(1f), ExpenseColor) }
                         SummaryCard(uiText(language, "Available balance", "Solde disponible", "الرصيد المتاح"), "${"%.2f".format(income-expense)} DH", Modifier.fillMaxWidth())
-                        OutlinedTextField(value = newTitle, onValueChange = { newTitle = it }, modifier = Modifier.fillMaxWidth(), placeholder = { Text(uiText(language, "Description", "Description", "الوصف")) }, singleLine = true)
+                        OutlinedTextField(value = newTitle, onValueChange = { if (it.length <= 500) newTitle = it }, modifier = Modifier.fillMaxWidth(), placeholder = { Text(uiText(language, "Description", "Description", "الوصف")) }, singleLine = true)
                         OutlinedTextField(value = newAmount, onValueChange = { newAmount = it }, modifier = Modifier.fillMaxWidth(), placeholder = { Text(uiText(language, "Amount in MAD", "Montant en MAD", "المبلغ بالدرهم")) }, singleLine = true)
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             Button(onClick = { val a = newAmount.replace(",", ".").toDoubleOrNull(); if (a != null && a.isFinite() && a > 0) { money = money + MoneyItem(newTitle.ifBlank { uiText(language, "Income", "Revenu", "مدخول") }, a, true); saveMoney(); newTitle = ""; newAmount = "" } else { info = uiText(language, "Enter a valid amount greater than zero.", "Saisissez un montant valide supérieur à zéro.", "دخل مبلغ صحيح أكبر من صفر.") } }, modifier = Modifier.weight(1f)) { Text(uiText(language, "Add income", "Ajouter un revenu", "إضافة مدخول")) }
@@ -302,7 +307,7 @@ fun DailySmartApp() {
                             }
                         }
                         Spacer(Modifier.height(10.dp))
-                        OutlinedTextField(value = newHabit, onValueChange = { newHabit = it }, modifier = Modifier.fillMaxWidth(), placeholder = { Text(uiText(language, "New daily habit", "Nouvelle habitude", "عادة يومية جديدة")) }, singleLine = true)
+                        OutlinedTextField(value = newHabit, onValueChange = { if (it.length <= 500) newHabit = it }, modifier = Modifier.fillMaxWidth(), placeholder = { Text(uiText(language, "New daily habit", "Nouvelle habitude", "عادة يومية جديدة")) }, singleLine = true)
                         Button(onClick = { if (newHabit.isNotBlank()) { habits = habits + HabitItem(newHabit.trim()); saveHabits(); newHabit = "" } }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(14.dp)) { Icon(Icons.Default.Add, null); Spacer(Modifier.width(7.dp)); Text(uiText(language, "Add habit", "Ajouter une habitude", "إضافة عادة")) }
                         if (habits.isEmpty()) Text(uiText(language, "No habits yet. Add one small daily habit.", "Aucune habitude pour le moment.", "ما كايناش عادات دابا. زيد عادة صغيرة كل نهار."), color = Muted, fontSize = 13.sp, modifier = Modifier.padding(vertical = 14.dp))
                         LazyColumn(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
