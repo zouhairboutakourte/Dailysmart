@@ -1,22 +1,24 @@
 # DailySmart V2
 
-A clean, independent Android application built with Kotlin and Jetpack Compose.
+Independent Android application built with Kotlin and Jetpack Compose.
 
-## Current first-build scope
-- Independent package: `com.dailysmart.app.v2`
-- Dark navy mobile interface
-- Local task list with completion and deletion
-- Personal finance income/expense ledger in MAD
-- Local persistence using Android SharedPreferences
-- Assistant command interpreter for task, income and expense entry
-- CSV import/export for finance records
-- No ads, no subscription, no embedded AI API key
+## Implemented in version 2.1
+- Separate package: `com.dailysmart.app.v2`
+- Dark navy interface
+- Local assistant command shortcuts (not a connected LLM)
+- Finance ledger: income, expenses and MAD balance
+- Task list: add, complete and delete
+- Habits: add, daily check-off, reset checkmarks and delete
+- CSV finance import/export
+- Settings screen with transparent privacy and feature status
+- Local persistence via SharedPreferences
+- No ads, no subscription, no account and no embedded AI API key
 
-## Planned next milestones
-1. Room database + data migration and automated tests.
-2. Real XLSX workbook import/export, formulas, charts and spreadsheet analysis.
-3. Secure AI backend/proxy with provider configuration outside the APK.
-4. Arabic/Darija/French/English localization and full RTL.
-5. Habits, goals, budgets, reports, reminders and backup.
+## Not yet implemented
+- Room database and automated persistence tests
+- Real conversational AI / secure backend
+- XLSX workbook import/export, formulas and charts (CSV only currently)
+- Full Arabic, Darija, French and English localization
+- Calendar, reminders, goals and backup/restore
 
-The assistant is deliberately transparent: the first build executes a small set of local commands. It does not claim to be a connected large-language-model assistant until a secure backend is implemented.
+The app labels unavailable capabilities honestly; it does not present local command shortcuts as an LLM.

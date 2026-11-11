@@ -43,6 +43,7 @@ class MainActivity : ComponentActivity() {
 
 data class TaskItem(val title: String, val done: Boolean = false)
 data class MoneyItem(val title: String, val amount: Double, val income: Boolean)
+data class HabitItem(val title: String, val completedToday: Boolean = false)
 
 @Composable
 fun DailySmartApp() {
@@ -50,6 +51,8 @@ fun DailySmartApp() {
     val prefs = remember { context.getSharedPreferences("dailysmart_v2", Context.MODE_PRIVATE) }
     var tasks by remember { mutableStateOf(loadTasks(prefs)) }
     var money by remember { mutableStateOf(loadMoney(prefs)) }
+    var habits by remember { mutableStateOf(loadHabits(prefs)) }
+    var newHabit by remember { mutableStateOf("") }
     var tab by remember { mutableStateOf("Assistant") }
     var command by remember { mutableStateOf("") }
     var newTitle by remember { mutableStateOf("") }
@@ -58,6 +61,7 @@ fun DailySmartApp() {
 
     fun saveTasks() { prefs.edit().putString("tasks", tasks.joinToString("\n") { (if (it.done) "1" else "0") + "|" + it.title.replace("\n", " ") }).apply() }
     fun saveMoney() { prefs.edit().putString("money", money.joinToString("\n") { (if (it.income) "I" else "E") + "|" + it.amount + "|" + it.title.replace("\n", " ") }).apply() }
+    fun saveHabits() { prefs.edit().putString("habits", habits.joinToString("\n") { (if (it.completedToday) "1" else "0") + "|" + it.title.replace("\n", " ") }).apply() }
 
     val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/csv")) { uri ->
         if (uri != null) runCatching {
@@ -84,9 +88,9 @@ fun DailySmartApp() {
     MaterialTheme(colorScheme = darkColorScheme(background = Navy, surface = Panel, primary = Accent, onBackground = White, onSurface = White)) {
         Scaffold(containerColor = Navy, bottomBar = {
             NavigationBar(containerColor = Panel) {
-                listOf("Assistant", "Finance", "Tasks", "Excel").forEach { name ->
+                listOf("Assistant", "Finance", "Tasks", "Habits", "Excel", "Settings").forEach { name ->
                     NavigationBarItem(selected = tab == name, onClick = { tab = name }, icon = {
-                        Icon(when(name) { "Assistant" -> Icons.Default.AutoAwesome; "Finance" -> Icons.Default.AccountBalanceWallet; "Tasks" -> Icons.Default.CheckCircle; else -> Icons.Default.TableChart }, null)
+                        Icon(when(name) { "Assistant" -> Icons.Default.AutoAwesome; "Finance" -> Icons.Default.AccountBalanceWallet; "Tasks" -> Icons.Default.CheckCircle; "Habits" -> Icons.Default.Favorite; "Excel" -> Icons.Default.TableChart; else -> Icons.Default.Settings }, null)
                     }, label = { Text(name) }, colors = NavigationBarItemDefaults.colors(selectedIconColor = Accent, selectedTextColor = Accent, indicatorColor = Navy, unselectedTextColor = Muted))
                 }
             }
@@ -174,6 +178,49 @@ fun DailySmartApp() {
                         }
                         LazyColumn { itemsIndexed(money.reversed()) { _, item -> ListItem(headlineContent = { Text(item.title) }, supportingContent = { Text(if(item.income) "Income" else "Expense", color = Muted) }, trailingContent = { Text("${if(item.income) "+" else "-"}${item.amount} DH", color = if(item.income) Accent else White) }, colors = ListItemDefaults.colors(containerColor = Panel)) } }
                     }
+                    "Habits" -> {
+                        Text("DAILY HABITS", color = Muted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Spacer(Modifier.height(8.dp))
+                        Card(colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(16.dp)) {
+                            Column(Modifier.padding(14.dp)) {
+                                Text("${habits.count { it.completedToday }} / ${habits.size} completed today", color = Accent, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                                Text("Build consistency one day at a time.", color = Muted, fontSize = 12.sp)
+                            }
+                        }
+                        Spacer(Modifier.height(10.dp))
+                        OutlinedTextField(value = newHabit, onValueChange = { newHabit = it }, modifier = Modifier.fillMaxWidth(), placeholder = { Text("New daily habit") }, singleLine = true)
+                        Button(onClick = { if (newHabit.isNotBlank()) { habits = habits + HabitItem(newHabit.trim()); saveHabits(); newHabit = "" } }, modifier = Modifier.fillMaxWidth()) { Text("Add habit") }
+                        LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            itemsIndexed(habits) { i, habit ->
+                                Card(colors = CardDefaults.cardColors(containerColor = Panel)) {
+                                    Row(Modifier.fillMaxWidth().clickable { habits = habits.toMutableList().also { it[i] = habit.copy(completedToday = !habit.completedToday) }; saveHabits() }.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(if (habit.completedToday) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked, null, tint = if (habit.completedToday) Accent else Muted)
+                                        Spacer(Modifier.width(10.dp))
+                                        Text(habit.title, modifier = Modifier.weight(1f), color = if (habit.completedToday) Muted else White)
+                                        IconButton(onClick = { habits = habits.toMutableList().also { it.removeAt(i) }; saveHabits() }) { Icon(Icons.Default.Delete, null, tint = Muted) }
+                                    }
+                                }
+                            }
+                        }
+                        OutlinedButton(onClick = { habits = habits.map { it.copy(completedToday = false) }; saveHabits() }, modifier = Modifier.fillMaxWidth()) { Text("Reset daily checkmarks") }
+                    }
+                    "Settings" -> {
+                        Text("SETTINGS", color = Muted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Card(colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(16.dp)) {
+                            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                Text("DailySmart V2", color = White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                                Text("Version 2.1 · Independent Android application", color = Muted, fontSize = 12.sp)
+                                Divider(color = Muted.copy(alpha = 0.25f))
+                                Text("Currency", color = Muted, fontSize = 12.sp)
+                                Text("Moroccan dirham (MAD)", color = White)
+                                Text("Storage", color = Muted, fontSize = 12.sp)
+                                Text("Your tasks, habits and finance records are stored locally on this device.", color = White)
+                                Text("Privacy", color = Muted, fontSize = 12.sp)
+                                Text("No ads. No account required. No AI API key is embedded in this APK.", color = White)
+                                Text("AI connection and XLSX workbook support are not enabled in this build.", color = Accent, fontSize = 12.sp)
+                            }
+                        }
+                    }
                     else -> {
                         Text("SPREADSHEET TOOLS", color = Muted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         Card(colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(18.dp)) {
@@ -203,6 +250,8 @@ private fun SummaryCard(label: String, value: String, modifier: Modifier = Modif
 }
 private fun loadTasks(p: android.content.SharedPreferences): List<TaskItem> =
     p.getString("tasks", "")!!.lines().filter { it.contains("|") }.map { TaskItem(it.substringAfter("|"), it.substringBefore("|") == "1") }
+private fun loadHabits(p: android.content.SharedPreferences): List<HabitItem> =
+    p.getString("habits", "")!!.lines().filter { it.contains("|") }.map { HabitItem(it.substringAfter("|"), it.substringBefore("|") == "1") }
 private fun loadMoney(p: android.content.SharedPreferences): List<MoneyItem> =
     p.getString("money", "")!!.lines().filter { it.count { c -> c == '|' } >= 2 }.mapNotNull {
         val a = it.split("|", limit = 3); MoneyItem(a[2], a[1].toDoubleOrNull() ?: return@mapNotNull null, a[0] == "I")
