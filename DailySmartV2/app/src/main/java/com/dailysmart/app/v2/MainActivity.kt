@@ -313,7 +313,7 @@ fun DailySmartApp() {
                         Card(colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(16.dp)) {
                             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                                 Text("DailySmart V2", color = White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                                Text("Version 2.3.0 · Independent Android application", color = Muted, fontSize = 12.sp)
+                                Text("Version 2.4.0 · Independent Android application", color = Muted, fontSize = 12.sp)
                                 Divider(color = Muted.copy(alpha = 0.25f))
                                 Text("Currency", color = Muted, fontSize = 12.sp)
                                 Text("Moroccan dirham (MAD)", color = White)
