@@ -56,9 +56,17 @@ data class HabitItem(val title: String, val completedToday: Boolean = false)
 fun DailySmartApp() {
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences("dailysmart_v2", Context.MODE_PRIVATE) }
-    var tasks by remember { mutableStateOf(loadTasks(prefs)) }
-    var money by remember { mutableStateOf(loadMoney(prefs)) }
-    var habits by remember { mutableStateOf(loadHabits(prefs)) }
+    val database = remember {
+        LocalDatabase(context).also { db ->
+            db.migrateLegacyOnce(
+                loadTasks(prefs), loadMoney(prefs), loadHabits(prefs),
+                prefs.getString("habits_date", "") ?: ""
+            )
+        }
+    }
+    var tasks by remember { mutableStateOf(database.loadTasks()) }
+    var money by remember { mutableStateOf(database.loadMoney()) }
+    var habits by remember { mutableStateOf(database.loadHabitsForToday(todayKey())) }
     var newHabit by remember { mutableStateOf("") }
     var tab by remember { mutableStateOf("Assistant") }
     var command by remember { mutableStateOf("") }
@@ -84,9 +92,9 @@ fun DailySmartApp() {
         }.onFailure { info = "Restore failed: ${it.localizedMessage}" }
     }
 
-    fun saveTasks() { prefs.edit().putString("tasks", tasks.joinToString("\n") { (if (it.done) "1" else "0") + "|" + encodeStoredText(it.title.replace("\n", " ")) }).apply() }
-    fun saveMoney() { prefs.edit().putString("money", money.joinToString("\n") { (if (it.income) "I" else "E") + "|" + it.amount + "|" + encodeStoredText(it.title.replace("\n", " ")) }).apply() }
-    fun saveHabits() { prefs.edit().putString("habits", habits.joinToString("\n") { (if (it.completedToday) "1" else "0") + "|" + encodeStoredText(it.title.replace("\n", " ")) }).putString("habits_date", todayKey()).apply() }
+    fun saveTasks() { database.replaceTasks(tasks) }
+    fun saveMoney() { database.replaceMoney(money) }
+    fun saveHabits() { database.replaceHabits(habits, todayKey()) }
 
     val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/csv")) { uri ->
         if (uri != null) runCatching {
