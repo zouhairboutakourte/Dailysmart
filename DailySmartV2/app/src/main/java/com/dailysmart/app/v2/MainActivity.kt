@@ -93,10 +93,15 @@ fun DailySmartApp() {
     }
     val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         if (uri != null) runCatching {
-            val rows = context.contentResolver.openInputStream(uri)!!.bufferedReader().readLines().drop(1)
+            val csvText = context.contentResolver.openInputStream(uri)?.use { readBoundedText(it, 5 * 1024 * 1024, "CSV") } ?: throw IllegalStateException("Could not open CSV file.")
+            val rows = csvText.lineSequence().drop(1).toList()
             val imported = rows.mapNotNull { line ->
                 val p = parseCsvLine(line)
-                if (p.size >= 3) MoneyItem(p[1].trim().trim('"'), p[2].toDoubleOrNull() ?: return@mapNotNull null, listOf("income", "revenu", "recette", "دخل").any { p[0].contains(it, true) }) else null
+                if (p.size >= 3) {
+                    val amount = p[2].trim().toDoubleOrNull() ?: return@mapNotNull null
+                    if (!amount.isFinite() || amount <= 0.0) return@mapNotNull null
+                    MoneyItem(p[1].trim().trim('"'), amount, listOf("income", "revenu", "recette", "دخل").any { p[0].contains(it, true) })
+                } else null
             }
             money = money + imported
             saveMoney()
@@ -405,4 +410,19 @@ private fun readBackupBounded(input: InputStream): ByteArray {
         output.write(buffer, 0, count)
     }
     return output.toByteArray()
+}
+
+
+private fun readBoundedText(input: InputStream, maxBytes: Int, label: String): String {
+    val output = java.io.ByteArrayOutputStream()
+    val buffer = ByteArray(8 * 1024)
+    var total = 0
+    while (true) {
+        val count = input.read(buffer)
+        if (count < 0) break
+        total += count
+        require(total <= maxBytes) { "$label file exceeds the ${maxBytes / (1024 * 1024)} MB safety limit." }
+        output.write(buffer, 0, count)
+    }
+    return output.toString(Charsets.UTF_8.name())
 }
