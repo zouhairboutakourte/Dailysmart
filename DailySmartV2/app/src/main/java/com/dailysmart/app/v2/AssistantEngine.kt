@@ -24,7 +24,7 @@ object AssistantEngine {
         )
         taskPrefixes.firstOrNull { lower.startsWith(it) }?.let { prefix ->
             val title = input.drop(prefix.length).trim().trimStart(':', '-', ' ')
-            if (title.isNotBlank()) return AssistantAction.AddTask(title)
+            if (title.isNotBlank() && title.length <= 500) return AssistantAction.AddTask(title)
             return AssistantAction.Help
         }
 
@@ -56,6 +56,7 @@ object AssistantEngine {
                 val description = (rest.removeRange(amountMatch.range).trim()).ifBlank {
                     if (isIncome) "Income" else "Expense"
                 }
+                if (description.length > 500) return AssistantAction.Help
                 return AssistantAction.AddMoney(amount, description, isIncome)
             }
         }
