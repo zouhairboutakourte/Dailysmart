@@ -9,20 +9,20 @@ class AssistantEngineTest {
     fun parsesDarijaExpenseCommand() {
         val action = AssistantEngine.parse("sajel masrouf 45 qhwa")
         assertTrue(action is AssistantAction.AddMoney)
-        action as AssistantAction.AddMoney
-        assertEquals(45.0, action.amount, 0.001)
-        assertEquals("qhwa", action.description)
-        assertEquals(false, action.income)
+        val money = action as AssistantAction.AddMoney
+        assertEquals(45.0, money.amount, 0.001)
+        assertEquals("qhwa", money.description)
+        assertEquals(false, money.income)
     }
 
     @Test
     fun parsesArabicIndicDigitsForIncome() {
         val action = AssistantEngine.parse("سجل دخل ١٢٠٠ راتب")
         assertTrue(action is AssistantAction.AddMoney)
-        action as AssistantAction.AddMoney
-        assertEquals(1200.0, action.amount, 0.001)
-        assertEquals("راتب", action.description)
-        assertEquals(true, action.income)
+        val money = action as AssistantAction.AddMoney
+        assertEquals(1200.0, money.amount, 0.001)
+        assertEquals("راتب", money.description)
+        assertEquals(true, money.income)
     }
 
     @Test
@@ -36,10 +36,10 @@ class AssistantEngineTest {
     fun parsesFrenchExpenseCommand() {
         val action = AssistantEngine.parse("j'ai dépensé 25 café")
         assertTrue(action is AssistantAction.AddMoney)
-        action as AssistantAction.AddMoney
-        assertEquals(25.0, action.amount, 0.001)
-        assertEquals("café", action.description)
-        assertEquals(false, action.income)
+        val money = action as AssistantAction.AddMoney
+        assertEquals(25.0, money.amount, 0.001)
+        assertEquals("café", money.description)
+        assertEquals(false, money.income)
     }
 
     @Test
