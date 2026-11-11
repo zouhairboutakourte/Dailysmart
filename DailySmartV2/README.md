@@ -5,7 +5,7 @@ Independent Android application built with Kotlin and Jetpack Compose.
 ## Implemented in version 2.1
 - Separate package: `com.dailysmart.app.v2`
 - Dark navy interface
-- Local assistant command shortcuts (not a connected LLM)
+- Offline assistant commands in English, French and Arabic: create tasks, record income/expenses, and request a finance report (not a connected LLM)
 - Finance ledger: income, expenses and MAD balance
 - Task list: add, complete and delete
 - Habits: add, daily check-off, reset checkmarks and delete
@@ -18,7 +18,7 @@ Independent Android application built with Kotlin and Jetpack Compose.
 - Room database and automated persistence tests
 - Real conversational AI / secure backend
 - XLSX workbook import/export, formulas and charts (CSV only currently)
-- Full Arabic, Darija, French and English localization
+- Full Arabic, Darija, French and English interface localization
 - Calendar, reminders, goals and backup/restore
 
 The app labels unavailable capabilities honestly; it does not present local command shortcuts as an LLM.
