@@ -14,6 +14,7 @@ sealed class AssistantAction {
 object AssistantEngine {
     fun parse(raw: String): AssistantAction {
         val input = raw.trim()
+        if (input.isBlank() || input.length > 1500) return AssistantAction.Help
         val normalizedInput = normalizeArabicDigits(input)
         val lower = normalizedInput.lowercase()
 
@@ -29,33 +30,39 @@ object AssistantEngine {
         }
 
         val moneyPrefixes = listOf(
-            Triple("expense", false, "expense"), Triple("spend", false, "spend"),
-            Triple("مصروف", false, "مصروف"), Triple("سجل مصروف", false, "سجل مصروف"),
-            Triple("dépense", false, "dépense"), Triple("depense", false, "depense"),
-            Triple("income", true, "income"), Triple("salary", true, "salary"),
-            Triple("دخل", true, "دخل"), Triple("سجل دخل", true, "سجل دخل"),
-            Triple("revenu", true, "revenu"), Triple("recette", true, "recette"),
-            Triple("masrouf", false, "masrouf"), Triple("sajel masrouf", false, "sajel masrouf"),
-            Triple("sraft", false, "sraft"), Triple("sreft", false, "sreft"), Triple("khrjt", false, "khrjt"),
-            Triple("khrej", false, "khrej"), Triple("chrit", false, "chrit"), Triple("khlest", false, "khlest"),
-            Triple("sarf", false, "sarf"), Triple("dkhl", true, "dkhl"), Triple("dakhl", true, "dakhl"),
-            Triple("sajel dakhl", true, "sajel dakhl"), Triple("dkhol", true, "dkhol"),
-            Triple("khdemt", true, "khdemt"), Triple("khedmt", true, "khedmt"),
-            Triple("j'ai dépensé", false, "j'ai dépensé"), Triple("j'ai depense", false, "j'ai depense"),
-            Triple("j'ai reçu", true, "j'ai reçu"), Triple("j'ai recu", true, "j'ai recu"),
-            Triple("gagné", true, "gagné"), Triple("gagne", true, "gagne")
+            "j'ai dépensé" to false, "j'ai depense" to false, "i spent" to false,
+            "j'ai payé" to false, "j'ai paye" to false, "i paid" to false,
+            "spent" to false, "spend" to false, "paid" to false, "expense" to false,
+            "sجل مصروف" to false, "سجل مصروف" to false, "مصروف" to false,
+            "dépense" to false, "depense" to false,
+            "income" to true, "salary" to true, "دخل" to true, "سجل دخل" to true,
+            "revenu" to true, "recette" to true,
+            "masrouf" to false, "sajel masrouf" to false,
+            "sraft" to false, "sreft" to false, "khrjt" to false,
+            "khrej" to false, "chrit" to false, "khlest" to false,
+            "sarf" to false, "dkhl" to true, "dakhl" to true,
+            "sajel dakhl" to true, "dkhol" to true,
+            "khdemt" to true, "khedmt" to true,
+            "j'ai reçu" to true, "j'ai recu" to true,
+            "gagné" to true, "gagne" to true,
+            "صرفت" to false, "صرفـت" to false, "خلصت" to false,
+            "شريت" to false, "دخلت" to true
         )
-        for ((prefix, isIncome, _) in moneyPrefixes.sortedByDescending { it.first.length }) {
+        for ((prefix, isIncome) in moneyPrefixes.sortedByDescending { it.first.length }) {
             if (lower.startsWith(prefix)) {
                 val rest = normalizedInput.drop(prefix.length).trim().trimStart(':', '-', ' ')
-                val amountMatch = Regex("""(?:^|\s)(\d+(?:[.,]\d{1,2})?)(?=\s|$)""").find(rest)
+                val amountMatch = Regex("""(?:^|\\s)(\\d+(?:[.,]\\d{1,2})?)(?=\\s|$)""").find(rest)
                     ?: return AssistantAction.Help
                 val amount = amountMatch.groupValues[1].replace(',', '.').toDoubleOrNull()
                     ?: return AssistantAction.Help
                 if (!amount.isFinite() || amount <= 0.0) return AssistantAction.Help
-                val description = (rest.removeRange(amountMatch.range).trim()).ifBlank {
-                    if (isIncome) "Income" else "Expense"
-                }
+                var description = rest.removeRange(amountMatch.range).trim()
+                description = description
+                    .replace(Regex("(?i)\\b(dh|dhs|mad|dirham|dirhams)\\b"), " ")
+                    .trim()
+                    .replace(Regex("^(?i)(on|for|at|in|sur|pour|à|au|3la|3la|f|في|على)\\s*"), "")
+                    .trim(' ', ':', '-', '،', ',')
+                if (description.isBlank()) description = if (isIncome) "Income" else "Expense"
                 if (description.length > 500) return AssistantAction.Help
                 return AssistantAction.AddMoney(amount, description, isIncome)
             }
@@ -67,7 +74,6 @@ object AssistantEngine {
         return AssistantAction.Help
     }
 
-
     private fun normalizeArabicDigits(value: String): String = buildString(value.length) {
         value.forEach { char ->
             append(
@@ -75,6 +81,7 @@ object AssistantEngine {
                     '٠' -> '0'; '١' -> '1'; '٢' -> '2'; '٣' -> '3'; '٤' -> '4'
                     '٥' -> '5'; '٦' -> '6'; '٧' -> '7'; '٨' -> '8'; '٩' -> '9'
                     '٫' -> '.'; '٬' -> ','
+                    '\u0640' -> ""
                     else -> char
                 }
             )
@@ -82,6 +89,6 @@ object AssistantEngine {
     }
 
     fun helpText(): String =
-        "Try: add task call the bank · sajel masrouf 50 qhwa · sajel dakhl 8000 salaire · ch7al sraft. " +
+        "Try: add task call the bank · spent 45 DH on coffee · sajel masrouf 50 qhwa · sajel dakhl 8000 salaire · ch7al sraft. " +
         "You can also use Arabic, French and Darija commands. This assistant works offline; it is not yet connected to an online AI model."
 }
