@@ -35,7 +35,8 @@ class LocalDatabase(context: Context) : SQLiteOpenHelper(
         db.beginTransaction()
         try {
             insertTasks(db, tasks)
-            insertMoney(db, money)
+            // SharedPreferences records predate reliable transaction timestamps.
+            insertMoney(db, money.map { it.copy(createdAt = 0L) })
             insertHabits(db, habits)
             putMeta(db, "habits_date", habitsDate)
             putMeta(db, "legacy_migration_complete", "1")

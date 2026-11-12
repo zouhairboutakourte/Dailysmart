@@ -57,7 +57,7 @@ object FinanceAnalytics {
         return when {
             listOf("rent", "loyer", "كراء", "الكرا", "logement").any(text::contains) -> "Logement"
             listOf("fuel", "essence", "gasoline", "transport", "taxi", "tram", "bus", "بنزين", "مازوط", "طاكسي", "طوبيس").any(text::contains) -> "Transport"
-            listOf("doctor", "pharmacy", "medicine", "santé", "health", "دواء", "طبيب", "صيدلية", "صحة").any(text::contains) -> "Santé"
+            listOf("doctor", "pharmacy", "pharmacie", "medicine", "santé", "health", "دواء", "طبيب", "صيدلية", "صحة").any(text::contains) -> "Santé"
             listOf("electricity", "water bill", "internet", "phone bill", "facture", "فاتورة", "ضو", "ماء", "انترنت").any(text::contains) -> "Factures"
             listOf("grocery", "groceries", "marjane", "market", "food", "restaurant", "café", "coffee", "qhwa", "مقاضي", "خضرة", "ماكلة", "قهوة", "مطعم").any(text::contains) -> "Alimentation"
             listOf("cinema", "game", "games", "outing", "loisir", "ترفيه", "سينما").any(text::contains) -> "Loisirs"

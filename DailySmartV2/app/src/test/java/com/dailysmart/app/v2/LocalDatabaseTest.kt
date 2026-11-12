@@ -35,13 +35,13 @@ class LocalDatabaseTest {
         database.migrateLegacyOnce(tasks, money, habits, "2026-11-11")
 
         assertEquals(tasks, database.loadTasks())
-        assertEquals(listOf(MoneyItem("Salary", 8500.0, true)), database.loadMoney())
+        assertEquals(listOf(MoneyItem("Salary", 8500.0, true, 0L)), database.loadMoney())
         assertEquals(habits, database.loadHabitsForToday("2026-11-11"))
 
         database.migrateLegacyOnce(listOf(TaskItem("Replacement")), emptyList(), emptyList(), "2026-11-12")
 
         assertEquals(tasks, database.loadTasks())
-        assertEquals(listOf(MoneyItem("Salary", 8500.0, true)), database.loadMoney())
+        assertEquals(listOf(MoneyItem("Salary", 8500.0, true, 0L)), database.loadMoney())
     }
 
     @Test
