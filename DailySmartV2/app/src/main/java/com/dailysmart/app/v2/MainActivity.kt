@@ -127,9 +127,11 @@ fun DailySmartApp() {
                 ReminderManager.schedule(context, item)
                 reminders = ReminderManager.load(context)
                 reminderMessage = uiText(language, "Reminder scheduled.", "Rappel programmé.", "تسجل التذكير.")
+                info = reminderMessage
             } else {
                 reminderTitle = item.title
                 reminderMessage = uiText(language, "Allow notifications to receive reminders.", "Autorisez les notifications pour recevoir les rappels.", "سمح بالإشعارات باش توصلك التذكيرات.")
+                info = reminderMessage
             }
             pendingReminder = null
         }
@@ -142,6 +144,7 @@ fun DailySmartApp() {
             ReminderManager.schedule(context, item)
             reminders = ReminderManager.load(context)
             reminderMessage = uiText(language, "Reminder scheduled. Android may deliver it a little later to save battery.", "Rappel programmé. Android peut le livrer avec un léger retard pour économiser la batterie.", "تسجل التذكير. ممكن أندرويد يأخر الإشعار شوية لتوفير البطارية.")
+            info = reminderMessage
         }
     }
 
@@ -231,11 +234,13 @@ fun DailySmartApp() {
         val actionTitle = when (action) {
             is AssistantAction.AddTask -> uiText(language, "Confirm new task", "Confirmer la tâche", "تأكيد المهمة الجديدة")
             is AssistantAction.AddMoney -> uiText(language, "Confirm finance record", "Confirmer l’opération", "تأكيد العملية المالية")
+            is AssistantAction.AddReminder -> uiText(language, "Confirm reminder", "Confirmer le rappel", "تأكيد التذكير")
             else -> ""
         }
         val actionMessage = when (action) {
             is AssistantAction.AddTask -> "${uiText(language, "Add this task?", "Ajouter cette tâche ?", "واش نضيف هاد المهمة؟")}\n${action.title}"
             is AssistantAction.AddMoney -> "${uiText(language, if (action.income) "Record this income?" else "Record this expense?", if (action.income) "Enregistrer ce revenu ?" else "Enregistrer cette dépense ?", if (action.income) "واش نسجل هاد المدخول؟" else "واش نسجل هاد المصروف؟")}\n${action.amount} MAD · ${action.description}"
+            is AssistantAction.AddReminder -> "${uiText(language, "Schedule this reminder?", "Programmer ce rappel ?", "واش نبرمج هاد التذكير؟")}\n${action.title}\n${SimpleDateFormat("EEE, dd MMM yyyy · HH:mm", Locale.forLanguageTag(language)).format(Date(action.triggerAt))}"
             else -> ""
         }
         AlertDialog(
@@ -254,6 +259,13 @@ fun DailySmartApp() {
                             money = money + MoneyItem(action.description, action.amount, action.income)
                             saveMoney()
                             info = "${uiText(language, if (action.income) "Income recorded" else "Expense recorded", if (action.income) "Revenu enregistré" else "Dépense enregistrée", if (action.income) "تسجل المدخول" else "تسجل المصروف")}: ${action.amount} MAD"
+                        }
+                        is AssistantAction.AddReminder -> {
+                            if (action.triggerAt > System.currentTimeMillis()) {
+                                scheduleReminder(ReminderItem(System.currentTimeMillis(), action.title, action.triggerAt))
+                            } else {
+                                info = uiText(language, "That reminder time has passed. Please ask again.", "L’heure du rappel est passée. Veuillez réessayer.", "داك الوقت داز، عاود طلب التذكير بوقت آخر.")
+                            }
                         }
                         else -> Unit
                     }
@@ -358,7 +370,7 @@ fun DailySmartApp() {
                             Column(Modifier.padding(16.dp)) {
                                 Row(verticalAlignment = Alignment.CenterVertically) { Icon(Icons.Default.AutoAwesome, null, tint = Accent); Spacer(Modifier.width(8.dp)); Text(uiText(language, "DailySmart Assistant", "Assistant DailySmart", "مساعد DailySmart"), fontWeight = FontWeight.Bold, fontSize = 18.sp) }
                                 Spacer(Modifier.height(12.dp))
-                                Text(if (geminiConfigured) uiText(language, "Gemini AI is connected. It can propose task and finance actions; you confirm before saving. Reminders are managed in the Reminders tab.", "Gemini AI est connecté. Il peut proposer des tâches et opérations financières à confirmer. Gérez les rappels dans l’onglet Rappels.", "Gemini مربوط. يقدر يقترح مهام وعمليات مالية، وكتأكد قبل التسجيل. التذكيرات كتدبرها من خانة التذكيرات.") else uiText(language, "Gemini setup is prepared. Connect the Firebase project to activate online AI.", "La connexion Gemini est préparée. Connectez le projet Firebase pour activer l’IA.", "ربط Gemini جاهز برمجياً. خاصنا نربطو مشروع Firebase باش يتفعّل الذكاء الاصطناعي."), color = Muted, fontSize = 13.sp)
+                                Text(if (geminiConfigured) uiText(language, "Gemini can propose tasks, finance actions and reminders; you confirm before saving. Manage reminders in the Reminders tab.", "Gemini peut proposer des tâches, opérations financières et rappels ; confirmez avant l’enregistrement. Gérez aussi les rappels dans l’onglet Rappels.", "Gemini يقدر يقترح مهام ومصاريف ومداخيل وتذكيرات؛ كتأكد قبل التسجيل. تقدر تدبر التذكيرات من الخانة الخاصة بها.") else uiText(language, "Gemini setup is prepared. Connect the Firebase project to activate online AI.", "La connexion Gemini est préparée. Connectez le projet Firebase pour activer l’IA.", "ربط Gemini جاهز برمجياً. خاصنا نربطو مشروع Firebase باش يتفعّل الذكاء الاصطناعي."), color = Muted, fontSize = 13.sp)
                                 Spacer(Modifier.height(12.dp))
                                 Text(info, color = Accent, fontSize = 13.sp)
                             }
@@ -386,7 +398,7 @@ fun DailySmartApp() {
                                                 val interpretation = GeminiAssistant.interpret(c, language)
                                                 info = interpretation.reply
                                                 when (val aiAction = interpretation.action) {
-                                                    is AssistantAction.AddTask, is AssistantAction.AddMoney -> pendingAssistantAction = aiAction
+                                                    is AssistantAction.AddTask, is AssistantAction.AddMoney, is AssistantAction.AddReminder -> pendingAssistantAction = aiAction
                                                     AssistantAction.FinanceReport -> showFinanceReport()
                                                     else -> Unit
                                                 }

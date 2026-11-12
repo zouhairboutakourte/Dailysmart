@@ -7,6 +7,7 @@ package com.dailysmart.app.v2
 sealed class AssistantAction {
     data class AddTask(val title: String) : AssistantAction()
     data class AddMoney(val amount: Double, val description: String, val income: Boolean) : AssistantAction()
+    data class AddReminder(val title: String, val triggerAt: Long) : AssistantAction()
     data object FinanceReport : AssistantAction()
     data object Help : AssistantAction()
 }

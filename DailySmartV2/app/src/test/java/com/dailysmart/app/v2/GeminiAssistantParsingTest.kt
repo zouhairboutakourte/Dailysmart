@@ -6,6 +6,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.time.ZonedDateTime
 import org.robolectric.RobolectricTestRunner
 
 @RunWith(RobolectricTestRunner::class)
@@ -51,6 +52,22 @@ class GeminiAssistantParsingTest {
             """{"reply":"Here is your report.","action":"finance_report","title":"","amount":0,"description":""}"""
         )
         assertTrue(report.action is AssistantAction.FinanceReport)
+    }
+
+    @Test
+    fun parsesFutureReminderOnlyWhenTimestampHasOffset() {
+        val future = ZonedDateTime.now().plusDays(1).withHour(9).withMinute(0).withSecond(0).withNano(0).toOffsetDateTime().toString()
+        val result = GeminiAssistant.parseInterpretation(
+            """{"reply":"I can remind you. Please confirm.","action":"add_reminder","title":"Call the bank","amount":0,"description":"","trigger_at":"$future"}"""
+        )
+        val action = result.action as AssistantAction.AddReminder
+        assertEquals("Call the bank", action.title)
+        assertTrue(action.triggerAt > System.currentTimeMillis())
+
+        val noOffset = GeminiAssistant.parseInterpretation(
+            """{"reply":"Please clarify the time.","action":"add_reminder","title":"Call the bank","amount":0,"description":"","trigger_at":"2099-01-01T09:00:00"}"""
+        )
+        assertNull(noOffset.action)
     }
 
     @Test
