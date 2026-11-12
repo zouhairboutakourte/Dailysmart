@@ -11,6 +11,7 @@ import com.google.firebase.appcheck.playintegrity.PlayIntegrityAppCheckProviderF
 import org.json.JSONObject
 import java.time.OffsetDateTime
 import java.time.ZonedDateTime
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 data class AssistantInterpretation(
@@ -134,11 +135,14 @@ object GeminiAssistant {
             }
             "add_reminder" -> {
                 val title = json.optString("title").trim()
-                val triggerAt = runCatching {
-                    OffsetDateTime.parse(json.optString("trigger_at").trim()).toInstant().toEpochMilli()
+                val parsedTime = runCatching {
+                    OffsetDateTime.parse(json.optString("trigger_at").trim())
                 }.getOrNull()
+                val triggerAt = parsedTime?.toInstant()?.toEpochMilli()
+                val offsetMatchesDeviceZone = parsedTime != null &&
+                    parsedTime.offset == ZoneId.systemDefault().rules.getOffset(parsedTime.toInstant())
                 val now = System.currentTimeMillis()
-                if (title.isNotBlank() && title.length <= 180 && triggerAt != null &&
+                if (title.isNotBlank() && title.length <= 180 && triggerAt != null && offsetMatchesDeviceZone &&
                     triggerAt > now && triggerAt <= now + 366L * 24L * 60L * 60L * 1000L
                 ) AssistantAction.AddReminder(title, triggerAt) else null
             }

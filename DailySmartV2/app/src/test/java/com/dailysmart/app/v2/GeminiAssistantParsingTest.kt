@@ -6,7 +6,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
-import java.time.OffsetDateTime
+import java.time.ZonedDateTime
 import org.robolectric.RobolectricTestRunner
 
 @RunWith(RobolectricTestRunner::class)
@@ -56,7 +56,7 @@ class GeminiAssistantParsingTest {
 
     @Test
     fun parsesFutureReminderOnlyWhenTimestampHasOffset() {
-        val future = OffsetDateTime.now().plusDays(1).withHour(9).withMinute(0).withSecond(0).withNano(0).toString()
+        val future = ZonedDateTime.now().plusDays(1).withHour(9).withMinute(0).withSecond(0).withNano(0).toOffsetDateTime().toString()
         val result = GeminiAssistant.parseInterpretation(
             """{"reply":"I can remind you. Please confirm.","action":"add_reminder","title":"Call the bank","amount":0,"description":"","trigger_at":"$future"}"""
         )
