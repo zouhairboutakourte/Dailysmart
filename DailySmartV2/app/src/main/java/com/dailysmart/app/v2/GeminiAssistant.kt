@@ -2,8 +2,10 @@ package com.dailysmart.app.v2
 
 import android.content.Context
 import com.google.firebase.Firebase
-import com.google.firebase.ai.GenerativeBackend
+import com.google.firebase.ai.type.GenerativeBackend
 import com.google.firebase.ai.ai
+import com.google.firebase.appCheck
+import com.google.firebase.initialize
 import com.google.firebase.appcheck.debug.DebugAppCheckProviderFactory
 import com.google.firebase.appcheck.playintegrity.PlayIntegrityAppCheckProviderFactory
 
@@ -55,8 +57,11 @@ object GeminiAssistant {
             $question
         """.trimIndent()
 
-        val model = Firebase.ai(backend = GenerativeBackend.googleAI())
-            .generativeModel("gemini-3.6-flash")
+        val model = Firebase.ai(
+            backend = GenerativeBackend.googleAI(),
+            useLimitedUseAppCheckTokens = true
+        )
+            .generativeModel("gemini-3.5-flash")
         val response = model.generateContent(prompt)
         return response.text?.trim()?.takeIf { it.isNotEmpty() }
             ?: "Gemini returned an empty response. Please try again."
