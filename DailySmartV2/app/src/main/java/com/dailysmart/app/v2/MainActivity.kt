@@ -127,9 +127,11 @@ fun DailySmartApp() {
                 ReminderManager.schedule(context, item)
                 reminders = ReminderManager.load(context)
                 reminderMessage = uiText(language, "Reminder scheduled.", "Rappel programmé.", "تسجل التذكير.")
+                info = reminderMessage
             } else {
                 reminderTitle = item.title
                 reminderMessage = uiText(language, "Allow notifications to receive reminders.", "Autorisez les notifications pour recevoir les rappels.", "سمح بالإشعارات باش توصلك التذكيرات.")
+                info = reminderMessage
             }
             pendingReminder = null
         }
@@ -142,6 +144,7 @@ fun DailySmartApp() {
             ReminderManager.schedule(context, item)
             reminders = ReminderManager.load(context)
             reminderMessage = uiText(language, "Reminder scheduled. Android may deliver it a little later to save battery.", "Rappel programmé. Android peut le livrer avec un léger retard pour économiser la batterie.", "تسجل التذكير. ممكن أندرويد يأخر الإشعار شوية لتوفير البطارية.")
+            info = reminderMessage
         }
     }
 

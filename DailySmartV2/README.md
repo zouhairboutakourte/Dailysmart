@@ -29,7 +29,7 @@ Independent Android application built with Kotlin and Jetpack Compose.
 4. For debug testing, launch the app and register the App Check debug token shown in Android logs under **Firebase Console → App Check → Apps → Manage debug tokens**. Keep AI Logic App Check enforcement enabled.
 5. For Play Store builds, register Play Integrity for App Check and use the Play signing certificate fingerprints.
 
-The app build remains possible without `google-services.json`, but Gemini stays disabled until Firebase configuration is added. The assistant sends only the typed prompt to Gemini; it never uploads the user's finance ledger, tasks or habits. Gemini can propose one new task, one income/expense record, one-time reminder or a finance report. The app validates the proposed action and requires the user to confirm before adding a task or transaction; finance totals are calculated locally.
+The app build remains possible without `google-services.json`, but Gemini stays disabled until Firebase configuration is added. The assistant sends only the typed prompt to Gemini; it never uploads the user's finance ledger, tasks or habits. Gemini can propose one new task, one income/expense record, one-time reminder or a finance report. The app validates each proposed action and requires the user to confirm before adding a task, transaction or reminder; finance totals are calculated locally. Reminder schedules remain on-device and are not sent to Gemini.
 
 ## Not yet implemented
 - Real-device validation of backup/restore, upgrade from an older installed APK and performance is still required

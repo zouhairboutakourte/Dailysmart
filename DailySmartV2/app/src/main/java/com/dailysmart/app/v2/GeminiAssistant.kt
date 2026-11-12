@@ -21,7 +21,7 @@ data class AssistantInterpretation(
 /**
  * Gemini access through Firebase AI Logic.
  * The Gemini API key is never stored in this Android project or APK.
- * The user's finance ledger, tasks and habits are never sent to Gemini.
+ * The user's finance ledger, tasks, habits and stored reminders are never sent to Gemini.
  */
 object GeminiAssistant {
     @Volatile
@@ -68,7 +68,7 @@ object GeminiAssistant {
 
             Safety and accuracy rules:
             - You may propose exactly one new task, one expense, one income record, one one-time reminder, or a finance report.
-            - Never claim that anything was saved or changed. The app will ask the user to confirm before adding a task or money record.
+            - Never claim that anything was saved or changed. The app will ask the user to confirm before adding a task, money record or reminder.
             - For add_task, require a clear task title.
             - For add_expense or add_income, require an explicit positive numeric amount AND a clear description. Do not invent missing amounts or descriptions.
             - If amount or description is missing, use action "chat" and ask the user for the missing detail.
