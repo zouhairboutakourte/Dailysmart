@@ -10,7 +10,8 @@ Independent Android application built with Kotlin and Jetpack Compose.
 - Localized core navigation, task, finance, habit, backup and spreadsheet screens
 - Empty-state guidance and improved list scrolling
 - CSV parser supports quoted commas, escaped quotes and multiline descriptions; CSV, offline assistant commands and SQLite migration/reset have automated unit tests run before APK packaging
-- Offline assistant commands in English, French and Arabic: create tasks, record income/expenses, and request a finance report (not a connected LLM)
+- Offline assistant commands in English, French, Arabic and Darija for common tasks and finance actions
+- Gemini conversational assistant client through Firebase AI Logic; uses Google's proxy and Firebase App Check rather than embedding a Gemini API key
 - Finance ledger: income, expenses and MAD balance
 - Task list: add, complete and delete
 - Habits: add, daily check-off, reset checkmarks and delete
@@ -20,9 +21,18 @@ Independent Android application built with Kotlin and Jetpack Compose.
 - Offline SQLite persistence for tasks, finance records and habits, with a one-time transactional import from existing SharedPreferences records
 - No ads, no subscription, no account and no embedded AI API key
 
+## Gemini setup required before live AI works
+1. Create a Firebase project in the Firebase Console and register an Android app with package ID `com.dailysmart.app.v2`.
+2. In **AI Services → AI Logic**, select **Get started** and choose **Gemini Developer API**.
+3. Download the Android `google-services.json` file and place it at `DailySmartV2/app/google-services.json` in the repository. This is Firebase client configuration, not a Gemini API key; never add a Gemini API key to the app.
+4. For debug testing, launch the app and register the App Check debug token shown in Android logs under **Firebase Console → App Check → Apps → Manage debug tokens**. Keep AI Logic App Check enforcement enabled.
+5. For Play Store builds, register Play Integrity for App Check and use the Play signing certificate fingerprints.
+
+The app build remains possible without `google-services.json`, but Gemini stays disabled until Firebase configuration is added. The assistant currently sends only the typed prompt to Gemini; it does not upload the user's finance ledger, tasks or habits. Gemini replies conversationally; local deterministic commands continue to perform the supported task/finance actions.
+
 ## Not yet implemented
 - Real-device validation of backup/restore, upgrade from an older installed APK and performance is still required
-- Real conversational AI / secure backend
+- Gemini-driven structured tool execution (the current Gemini connection is conversational; data-changing actions remain local deterministic commands)
 - Editing arbitrary Excel workbooks, formulas and charts; XLSX support currently focuses on DailySmart finance transaction sheets
 - Full Arabic, Darija, French and English interface localization
 - Calendar, reminders and goals
