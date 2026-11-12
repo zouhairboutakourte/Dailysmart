@@ -178,7 +178,7 @@ fun DailySmartApp() {
         }
         Scaffold(containerColor = Color.Transparent, bottomBar = {
             NavigationBar(containerColor = Panel, tonalElevation = 12.dp) {
-                listOf("Assistant", "Finance", "Tasks", "Habits", "Excel", "Settings").forEach { name ->
+                listOf("Assistant", "Finance", "Tasks", "Habits").forEach { name ->
                     NavigationBarItem(selected = tab == name, onClick = { tab = name }, icon = {
                         Icon(when(name) { "Assistant" -> Icons.Default.AutoAwesome; "Finance" -> Icons.Default.AccountBalanceWallet; "Tasks" -> Icons.Default.CheckCircle; "Habits" -> Icons.Default.Favorite; "Excel" -> Icons.Default.TableChart; else -> Icons.Default.Settings }, null)
                     }, label = { Text(uiText(language, name, when(name) { "Assistant" -> "Assistant"; "Finance" -> "Finances"; "Tasks" -> "Tâches"; "Habits" -> "Habitudes"; "Excel" -> "Excel"; else -> "Paramètres" }, when(name) { "Assistant" -> "المساعد"; "Finance" -> "المالية"; "Tasks" -> "المهام"; "Habits" -> "العادات"; "Excel" -> "إكسيل"; else -> "الإعدادات" })) }, colors = NavigationBarItemDefaults.colors(selectedIconColor = Accent, selectedTextColor = Accent, indicatorColor = Navy, unselectedTextColor = Muted))
@@ -200,8 +200,13 @@ fun DailySmartApp() {
                             Spacer(Modifier.height(5.dp))
                             Text(SimpleDateFormat("EEEE, d MMMM", Locale.forLanguageTag(language)).format(Date()), color = Color(0xFFD0D9EC), fontSize = 12.sp)
                         }
-                        Box(Modifier.size(54.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.12f)), contentAlignment = Alignment.Center) {
-                            Icon(Icons.Default.Bolt, null, tint = Gold, modifier = Modifier.size(30.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Box(Modifier.size(44.dp).clip(RoundedCornerShape(15.dp)).background(Color.White.copy(alpha = 0.16f)).clickable { tab = "Excel" }, contentAlignment = Alignment.Center) {
+                                Icon(Icons.Default.TableChart, "Excel", tint = Color.White, modifier = Modifier.size(22.dp))
+                            }
+                            Box(Modifier.size(44.dp).clip(RoundedCornerShape(15.dp)).background(Color.White.copy(alpha = 0.16f)).clickable { tab = "Settings" }, contentAlignment = Alignment.Center) {
+                                Icon(Icons.Default.Settings, "Settings", tint = Color.White, modifier = Modifier.size(22.dp))
+                            }
                         }
                     }
                 }
