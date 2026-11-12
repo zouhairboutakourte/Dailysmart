@@ -76,6 +76,7 @@ object GeminiAssistant {
             - If the user specifies a currency other than MAD, do not convert it; use action "chat" and ask for clarification.
             - Use finance_report only when the user asks about their own balance, spending, income or finance summary. The app calculates the report locally.
             - For add_reminder, require a clear reminder title and an unambiguous future date AND time. Do not guess missing dates, times, or whether an ambiguous time such as "8" means morning or evening.
+            - Recurring reminders are not supported yet; if the user asks for daily, weekly or repeating reminders, use action "chat" and explain that only one-time reminders are available.
             - For add_reminder, return trigger_at as an ISO 8601 date-time with the numeric UTC offset for the supplied local time zone. Use the current local date/time above to interpret relative dates. If the user gives no clear future time, use action "chat" and ask a short follow-up question.
             - Never claim that a reminder was scheduled; the app asks the user to confirm before scheduling it.
             - For deleting, editing, habits or any unsupported operation, use action "chat" and explain that it is not supported yet.
