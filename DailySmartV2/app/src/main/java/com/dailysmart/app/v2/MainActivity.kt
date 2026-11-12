@@ -342,6 +342,21 @@ fun DailySmartApp() {
                                 Text(if (tasks.isEmpty()) uiText(language, "Add your first task and build a little momentum.", "Ajoutez votre première tâche.", "أضف أول مهمة وابدأ يومك.") else if (taskProgress >= 1f) uiText(language, "Everything is done. Great work!", "Tout est terminé. Bravo !", "أنهيت كل شيء، أحسنت!") else uiText(language, "One step at a time. Keep your streak moving.", "Un pas après l’autre.", "خطوة بخطوة، واصل التقدم."), color = Muted, fontSize = 12.sp)
                             }
                         }
+                        Spacer(Modifier.height(12.dp))
+                        val dailyQuote = DailyQuoteProvider.quoteFor(java.time.LocalDate.now().dayOfYear, language)
+                        Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF232C4A)), shape = RoundedCornerShape(18.dp)) {
+                            Column(Modifier.fillMaxWidth().padding(15.dp)) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Default.FormatQuote, null, tint = Lavender)
+                                    Spacer(Modifier.width(7.dp))
+                                    Text(uiText(language, "DAILY INSPIRATION", "INSPIRATION DU JOUR", "إلهام اليوم"), color = Lavender, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.8.sp)
+                                }
+                                Spacer(Modifier.height(7.dp))
+                                Text(dailyQuote, color = White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                                Spacer(Modifier.height(5.dp))
+                                Text(uiText(language, "A fresh thought to help you move forward.", "Une pensée pour avancer chaque jour.", "فكرة صغيرة تعاونك تتقدم كل نهار."), color = Muted, fontSize = 11.sp)
+                            }
+                        }
                     }
                     "Tasks" -> {
                         Text(uiText(language, "TASKS", "TÂCHES", "المهام"), color = Muted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
