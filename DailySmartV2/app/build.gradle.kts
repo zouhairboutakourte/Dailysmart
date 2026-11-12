@@ -3,6 +3,11 @@ plugins {
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
 }
+
+// Firebase config is added after the Firebase project is created.
+if (file("google-services.json").exists()) {
+    apply(plugin = "com.google.gms.google-services")
+}
 android {
     namespace = "com.dailysmart.app.v2"
     compileSdk = 35
@@ -30,6 +35,10 @@ dependencies {
     implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
+    implementation(platform("com.google.firebase:firebase-bom:35.1.0"))
+    implementation("com.google.firebase:firebase-ai")
+    debugImplementation("com.google.firebase:firebase-appcheck-debug")
+    releaseImplementation("com.google.firebase:firebase-appcheck-playintegrity")
     debugImplementation("androidx.compose.ui:ui-tooling")
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.robolectric:robolectric:4.14.1")
