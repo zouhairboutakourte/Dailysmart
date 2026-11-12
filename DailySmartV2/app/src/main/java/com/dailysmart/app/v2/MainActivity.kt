@@ -358,7 +358,7 @@ fun DailySmartApp() {
                             Column(Modifier.padding(16.dp)) {
                                 Row(verticalAlignment = Alignment.CenterVertically) { Icon(Icons.Default.AutoAwesome, null, tint = Accent); Spacer(Modifier.width(8.dp)); Text(uiText(language, "DailySmart Assistant", "Assistant DailySmart", "مساعد DailySmart"), fontWeight = FontWeight.Bold, fontSize = 18.sp) }
                                 Spacer(Modifier.height(12.dp))
-                                Text(if (geminiConfigured) uiText(language, "Gemini AI is connected through Firebase. Quick finance and task commands still run locally.", "Gemini AI est connecté via Firebase. Les commandes rapides restent locales.", "تم إعداد Gemini عبر Firebase. الأوامر السريعة للمهام والمالية ما زالت تُنفذ محلياً.") else uiText(language, "Gemini setup is prepared. Connect the Firebase project to activate online AI.", "La connexion Gemini est préparée. Connectez le projet Firebase pour activer l’IA.", "ربط Gemini جاهز برمجياً. خاصنا نربطو مشروع Firebase باش يتفعّل الذكاء الاصطناعي."), color = Muted, fontSize = 13.sp)
+                                Text(if (geminiConfigured) uiText(language, "Gemini AI is connected. It can propose task and finance actions; you confirm before saving. Reminders are managed in the Reminders tab.", "Gemini AI est connecté. Il peut proposer des tâches et opérations financières à confirmer. Gérez les rappels dans l’onglet Rappels.", "Gemini مربوط. يقدر يقترح مهام وعمليات مالية، وكتأكد قبل التسجيل. التذكيرات كتدبرها من خانة التذكيرات.") else uiText(language, "Gemini setup is prepared. Connect the Firebase project to activate online AI.", "La connexion Gemini est préparée. Connectez le projet Firebase pour activer l’IA.", "ربط Gemini جاهز برمجياً. خاصنا نربطو مشروع Firebase باش يتفعّل الذكاء الاصطناعي."), color = Muted, fontSize = 13.sp)
                                 Spacer(Modifier.height(12.dp))
                                 Text(info, color = Accent, fontSize = 13.sp)
                             }
@@ -577,6 +577,7 @@ fun DailySmartApp() {
                                     Text(uiText(language, "Schedule reminder", "Programmer le rappel", "برمج التذكير"))
                                 }
                                 Text(uiText(language, "Reminders are stored on this device. Android may delay delivery slightly to save battery.", "Les rappels restent sur cet appareil. Android peut retarder légèrement leur livraison pour économiser la batterie.", "التذكيرات كتخزن فهاد الهاتف. ممكن أندرويد يأخر الإشعار شوية لتوفير البطارية."), color = Muted, fontSize = 11.sp)
+                                    if (reminderMessage.isNotBlank()) Text(reminderMessage, color = Accent, fontSize = 12.sp)
                             }
                         }
                         Spacer(Modifier.height(12.dp))
