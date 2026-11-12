@@ -4,7 +4,7 @@ Independent Android application built with Kotlin and Jetpack Compose.
 
 ## Implemented in version 2.6.0
 - Separate package: `com.dailysmart.app.v2`
-- Refreshed dark navy interface with a blue/teal gradient hero, mint/lavender/gold accents, clearer finance colors, and daily progress feedback
+- Refreshed dark navy interface with a blue/teal gradient hero, mint/lavender/gold accents, clearer finance colors, daily progress feedback and an offline daily inspiration quote
 - Branded launcher icon
 - Arabic is the default UI language, with persistent Arabic/French/English selection and RTL layout
 - Localized core navigation, task, finance, habit, backup and spreadsheet screens
