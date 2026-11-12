@@ -55,7 +55,7 @@ class MainActivity : ComponentActivity() {
 }
 
 data class TaskItem(val title: String, val done: Boolean = false)
-data class MoneyItem(val title: String, val amount: Double, val income: Boolean)
+data class MoneyItem(val title: String, val amount: Double, val income: Boolean, val createdAt: Long = System.currentTimeMillis())
 data class HabitItem(val title: String, val completedToday: Boolean = false)
 
 @Composable
@@ -91,6 +91,7 @@ fun DailySmartApp() {
     var newAmount by remember { mutableStateOf("") }
     var info by remember { mutableStateOf(uiText(language, "Your personal workspace is ready.", "Votre espace est prêt.", "مساحتك الشخصية واجدة.")) }
     var pendingRestore by remember { mutableStateOf<BackupCodec.Snapshot?>(null) }
+    var pendingAssistantAction by remember { mutableStateOf<AssistantAction?>(null) }
 
     val backupLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
         if (uri != null) runCatching {
@@ -116,8 +117,8 @@ fun DailySmartApp() {
     val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/csv")) { uri ->
         if (uri != null) runCatching {
             context.contentResolver.openOutputStream(uri)?.bufferedWriter()?.use { out ->
-                out.appendLine("type,description,amount,currency")
-                money.forEach { out.appendLine("${if (it.income) "income" else "expense"},\"${it.title.replace("\"", "\"\"")}\",${it.amount},MAD") }
+                out.appendLine("type,description,amount,currency,date")
+                money.forEach { out.appendLine("${if (it.income) "income" else "expense"},\"${it.title.replace("\"", "\"\"")}\",${it.amount},MAD,${FinanceAnalytics.dateString(it.createdAt)}") }
             }
             info = "CSV export created."
         }.onFailure { info = "Export failed: ${it.localizedMessage}" }
@@ -134,7 +135,7 @@ fun DailySmartApp() {
                         val income = listOf("income", "revenu", "recette", "دخل").any { p[0].contains(it, true) }
                         val description = p[1].trim().trim('"').ifBlank { if (income) "Income" else "Expense" }
                         if (description.length > 500) return@mapNotNull null
-                        MoneyItem(description, amount, income)
+                        MoneyItem(description, amount, income, FinanceAnalytics.timestampFromDate(p.getOrNull(4).orEmpty()))
                     }
                 } else null
             }
@@ -162,7 +163,46 @@ fun DailySmartApp() {
 
     MaterialTheme(colorScheme = lightColorScheme(background = Navy, surface = Panel, primary = Accent, secondary = Lavender, onBackground = White, onSurface = White)) {
       CompositionLocalProvider(LocalLayoutDirection provides if (language == "ar") LayoutDirection.Rtl else LayoutDirection.Ltr) {
-        pendingRestore?.let { snapshot ->
+        pendingAssistantAction?.let { action ->
+        val actionTitle = when (action) {
+            is AssistantAction.AddTask -> uiText(language, "Confirm new task", "Confirmer la tâche", "تأكيد المهمة الجديدة")
+            is AssistantAction.AddMoney -> uiText(language, "Confirm finance record", "Confirmer l’opération", "تأكيد العملية المالية")
+            else -> ""
+        }
+        val actionMessage = when (action) {
+            is AssistantAction.AddTask -> "${uiText(language, "Add this task?", "Ajouter cette tâche ?", "واش نضيف هاد المهمة؟")}\n${action.title}"
+            is AssistantAction.AddMoney -> "${uiText(language, if (action.income) "Record this income?" else "Record this expense?", if (action.income) "Enregistrer ce revenu ?" else "Enregistrer cette dépense ?", if (action.income) "واش نسجل هاد المدخول؟" else "واش نسجل هاد المصروف؟")}\n${action.amount} MAD · ${action.description}"
+            else -> ""
+        }
+        AlertDialog(
+            onDismissRequest = { pendingAssistantAction = null },
+            title = { Text(actionTitle) },
+            text = { Text(actionMessage) },
+            confirmButton = {
+                TextButton(onClick = {
+                    when (action) {
+                        is AssistantAction.AddTask -> {
+                            tasks = tasks + TaskItem(action.title)
+                            saveTasks()
+                            info = "${uiText(language, "Task added", "Tâche ajoutée", "تمت إضافة المهمة")}: ${action.title}"
+                        }
+                        is AssistantAction.AddMoney -> {
+                            money = money + MoneyItem(action.description, action.amount, action.income)
+                            saveMoney()
+                            info = "${uiText(language, if (action.income) "Income recorded" else "Expense recorded", if (action.income) "Revenu enregistré" else "Dépense enregistrée", if (action.income) "تسجل المدخول" else "تسجل المصروف")}: ${action.amount} MAD"
+                        }
+                        else -> Unit
+                    }
+                    pendingAssistantAction = null
+                    command = ""
+                }) { Text(uiText(language, "Confirm", "Confirmer", "تأكيد")) }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingAssistantAction = null }) { Text(uiText(language, "Cancel", "Annuler", "إلغاء")) }
+            }
+        )
+    }
+    pendingRestore?.let { snapshot ->
             AlertDialog(
                 onDismissRequest = { pendingRestore = null },
                 title = { Text(uiText(language, "Restore DailySmart backup?", "Restaurer la sauvegarde DailySmart ?", "استرجاع نسخة DailySmart الاحتياطية؟")) },
@@ -234,17 +274,8 @@ fun DailySmartApp() {
                         Button(onClick = {
                             val c = command.trim()
                             when (val action = AssistantEngine.parse(c)) {
-                                is AssistantAction.AddTask -> {
-                                    tasks = tasks + TaskItem(action.title)
-                                    saveTasks()
-                                    info = "${uiText(language, "Task added", "Tâche ajoutée", "تمت إضافة المهمة")}: ${action.title}"
-                                    command = ""
-                                }
-                                is AssistantAction.AddMoney -> {
-                                    money = money + MoneyItem(action.description, action.amount, action.income)
-                                    saveMoney()
-                                    info = "${if (action.income) uiText(language, "Income", "Revenu", "مدخول") else uiText(language, "Expense", "Dépense", "مصروف")} ${uiText(language, "recorded", "enregistré", "تسجل")}: ${action.amount} MAD"
-                                    command = ""
+                                is AssistantAction.AddTask, is AssistantAction.AddMoney -> {
+                                    pendingAssistantAction = action
                                 }
                                 AssistantAction.FinanceReport -> {
                                     val totalIncome = money.filter { it.income }.sumOf { it.amount }
@@ -327,9 +358,31 @@ fun DailySmartApp() {
                     "Finance" -> {
                         val income = money.filter { it.income }.sumOf { it.amount }
                         val expense = money.filterNot { it.income }.sumOf { it.amount }
+                        val analytics = FinanceAnalytics.summarize(money)
                         Text(uiText(language, "PERSONAL FINANCE", "FINANCES PERSONNELLES", "المالية الشخصية"), color = Muted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) { SummaryCard(uiText(language, "Income", "Revenu", "المدخول"), "${"%.2f".format(income)} DH", Modifier.weight(1f), Accent); SummaryCard(uiText(language, "Expenses", "Dépenses", "المصاريف"), "${"%.2f".format(expense)} DH", Modifier.weight(1f), ExpenseColor) }
                         SummaryCard(uiText(language, "Available balance", "Solde disponible", "الرصيد المتاح"), "${"%.2f".format(income-expense)} DH", Modifier.fillMaxWidth())
+                        Card(colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(16.dp)) {
+                            Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Text(uiText(language, "Spending by period", "Dépenses par période", "المصاريف حسب الفترة"), fontWeight = FontWeight.Bold, color = White)
+                                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                    Text(uiText(language, "This week", "Cette semaine", "هاد الأسبوع"), color = Muted)
+                                    Text("${"%.0f".format(analytics.weekExpense)} DH", color = ExpenseColor, fontWeight = FontWeight.Bold)
+                                }
+                                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                    Text(uiText(language, "This month", "Ce mois", "هاد الشهر"), color = Muted)
+                                    Text("${"%.0f".format(analytics.monthExpense)} DH", color = ExpenseColor, fontWeight = FontWeight.Bold)
+                                }
+                                val topCategory = analytics.topExpenseCategory
+                                if (topCategory != null) {
+                                    Divider(color = Muted.copy(alpha = 0.2f))
+                                    Text("${uiText(language, "Top category this month", "Catégorie principale du mois", "أكثر فئة صرفتي فيها هاد الشهر")}: ${financeCategoryText(language, topCategory.first)} · ${"%.0f".format(topCategory.second)} DH", color = Accent, fontSize = 12.sp)
+                                }
+                                if (analytics.undatedRecords > 0) {
+                                    Text(uiText(language, "${analytics.undatedRecords} older records have no saved date and are excluded from period totals.", "${analytics.undatedRecords} anciennes opérations n’ont pas de date enregistrée et sont exclues des totaux par période.", "${analytics.undatedRecords} عمليات قديمة ما عندهاش تاريخ محفوظ، وما دخلناهاش فحساب الفترات."), color = Muted, fontSize = 11.sp)
+                                }
+                            }
+                        }
                         OutlinedTextField(value = newTitle, onValueChange = { if (it.length <= 500) newTitle = it }, modifier = Modifier.fillMaxWidth(), placeholder = { Text(uiText(language, "Description", "Description", "الوصف")) }, singleLine = true)
                         OutlinedTextField(value = newAmount, onValueChange = { newAmount = it }, modifier = Modifier.fillMaxWidth(), placeholder = { Text(uiText(language, "Amount in MAD", "Montant en MAD", "المبلغ بالدرهم")) }, singleLine = true)
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -448,6 +501,17 @@ private fun uiText(language: String, english: String, french: String, arabic: St
     else -> english
 }
 
+private fun financeCategoryText(language: String, category: String): String = when (category) {
+    "Alimentation" -> uiText(language, "Food", "Alimentation", "المأكولات")
+    "Logement" -> uiText(language, "Housing", "Logement", "السكن")
+    "Transport" -> uiText(language, "Transport", "Transport", "النقل")
+    "Santé" -> uiText(language, "Health", "Santé", "الصحة")
+    "Factures" -> uiText(language, "Bills", "Factures", "الفواتير")
+    "Loisirs" -> uiText(language, "Leisure", "Loisirs", "الترفيه")
+    "Épargne" -> uiText(language, "Savings", "Épargne", "الادخار")
+    else -> uiText(language, "Other", "Divers", "أخرى")
+}
+
 @Composable
 private fun SummaryCard(label: String, value: String, modifier: Modifier = Modifier, tint: Color = Accent) {
     Card(modifier = modifier.padding(vertical = 5.dp), colors = CardDefaults.cardColors(containerColor = PanelRaised), shape = RoundedCornerShape(18.dp)) {
@@ -497,7 +561,7 @@ private fun loadHabits(p: android.content.SharedPreferences): List<HabitItem> {
 private fun todayKey(): String = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
 private fun loadMoney(p: android.content.SharedPreferences): List<MoneyItem> =
     p.getString("money", "")!!.lines().filter { it.count { c -> c == '|' } >= 2 }.mapNotNull {
-        val a = it.split("|", limit = 3); MoneyItem(decodeStoredText(a[2]), a[1].toDoubleOrNull() ?: return@mapNotNull null, a[0] == "I")
+        val a = it.split("|", limit = 3); MoneyItem(decodeStoredText(a[2]), a[1].toDoubleOrNull() ?: return@mapNotNull null, a[0] == "I", 0L)
     }
 
 private fun readBackupBounded(input: InputStream): ByteArray {

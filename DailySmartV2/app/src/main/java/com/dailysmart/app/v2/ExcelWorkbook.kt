@@ -59,13 +59,13 @@ object ExcelWorkbook {
             val rows = buildString {
                 append("""<?xml version="1.0" encoding="UTF-8" standalone="yes"?>""")
                 append("""<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>""")
-                val headers = listOf("Type", "Description", "Amount", "Currency")
+                val headers = listOf("Type", "Description", "Amount", "Currency", "Date")
                 appendRow(1, headers.mapIndexed { i, v -> cell(i, 1, v) }.joinToString(""))
                 items.forEachIndexed { index, item ->
                     val row = index + 2
                     val type = if (item.income) "Income" else "Expense"
                     appendRow(row, cell(0, row, type) + cell(1, row, item.title) +
-                        """<c r="C$row" t="n"><v>${item.amount}</v></c>""" + cell(3, row, "MAD"))
+                        """<c r="C$row" t="n"><v>${item.amount}</v></c>""" + cell(3, row, "MAD") + cell(4, row, FinanceAnalytics.dateString(item.createdAt)))
                 }
                 append("</sheetData></worksheet>")
             }
@@ -113,6 +113,7 @@ object ExcelWorkbook {
         val typeCol = header.indexOfFirst { it in listOf("type", "kind", "transaction", "نوع", "النوع", "type d'opération") }.let { if (it < 0) 0 else it }
         val descriptionCol = header.indexOfFirst { it in listOf("description", "title", "label", "details", "الوصف", "البيان") }.let { if (it < 0) 1 else it }
         val amountCol = header.indexOfFirst { it in listOf("amount", "value", "montant", "المبلغ", "المجموع") }.let { if (it < 0) 2 else it }
+        val dateCol = header.indexOfFirst { it in listOf("date", "transaction date", "التاريخ") }
         return rows.drop(1).mapNotNull { row ->
             val amount = row.getOrNull(amountCol)?.replace(",", ".")?.replace(Regex("[^0-9.\\-]"), "")?.toDoubleOrNull()
                 ?: return@mapNotNull null
@@ -121,7 +122,7 @@ object ExcelWorkbook {
             val income = type.contains("income") || type.contains("revenu") || type.contains("دخل") || type.contains("recette")
             val description = row.getOrNull(descriptionCol).orEmpty().ifBlank { if (income) "Income" else "Expense" }
             if (description.length > 500) return@mapNotNull null
-            MoneyItem(description, amount, income)
+            MoneyItem(description, amount, income, FinanceAnalytics.timestampFromDate(row.getOrNull(dateCol).orEmpty()))
         }
     }
 

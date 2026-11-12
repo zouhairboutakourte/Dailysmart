@@ -6,7 +6,7 @@ import org.json.JSONObject
 /** Versioned, validated JSON backup for all user-owned DailySmart records. */
 object BackupCodec {
     const val MAX_BACKUP_BYTES = 2 * 1024 * 1024
-    private const val VERSION = 1
+    private const val VERSION = 2
     private const val MAX_RECORDS_PER_SECTION = 10_000
     private const val MAX_TITLE_LENGTH = 500
 
@@ -27,7 +27,7 @@ object BackupCodec {
         root.put("money", JSONArray().apply {
             money.forEach {
                 require(it.amount.isFinite() && it.amount > 0.0) { "Invalid finance amount in current data." }
-                put(JSONObject().put("title", clean(it.title)).put("amount", it.amount).put("income", it.income))
+                put(JSONObject().put("title", clean(it.title)).put("amount", it.amount).put("income", it.income).put("createdAt", it.createdAt))
             }
         })
         root.put("habits", JSONArray().apply {
@@ -44,7 +44,8 @@ object BackupCodec {
         }
         val root = JSONObject(bytes.toString(Charsets.UTF_8))
         require(root.optString("app") == "DailySmart") { "This file is not a DailySmart backup." }
-        require(root.optInt("version", -1) == VERSION) { "Unsupported backup version." }
+        val backupVersion = root.optInt("version", -1)
+        require(backupVersion in 1..VERSION) { "Unsupported backup version." }
         val tasksArray = root.optJSONArray("tasks") ?: throw IllegalArgumentException("Backup is missing tasks.")
         val moneyArray = root.optJSONArray("money") ?: throw IllegalArgumentException("Backup is missing finance records.")
         val habitsArray = root.optJSONArray("habits") ?: throw IllegalArgumentException("Backup is missing habits.")
@@ -60,7 +61,7 @@ object BackupCodec {
             val item = moneyArray.getJSONObject(i)
             val amount = item.getDouble("amount")
             require(amount.isFinite() && amount > 0.0) { "Backup contains an invalid amount." }
-            MoneyItem(clean(item.getString("title")), amount, item.getBoolean("income"))
+            MoneyItem(clean(item.getString("title")), amount, item.getBoolean("income"), item.optLong("createdAt", 0L))
         }
         val habits = (0 until habitsArray.length()).map { i ->
             val item = habitsArray.getJSONObject(i)

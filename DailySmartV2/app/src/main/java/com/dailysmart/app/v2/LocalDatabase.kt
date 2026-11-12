@@ -13,17 +13,20 @@ class LocalDatabase(context: Context) : SQLiteOpenHelper(
     context.applicationContext,
     "dailysmart_v2.db",
     null,
-    1
+    2
 ) {
     override fun onCreate(db: SQLiteDatabase) {
         db.execSQL("CREATE TABLE tasks (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT NOT NULL, done INTEGER NOT NULL)")
-        db.execSQL("CREATE TABLE money (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT NOT NULL, amount REAL NOT NULL, income INTEGER NOT NULL)")
+        db.execSQL("CREATE TABLE money (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT NOT NULL, amount REAL NOT NULL, income INTEGER NOT NULL, created_at INTEGER NOT NULL DEFAULT 0)")
         db.execSQL("CREATE TABLE habits (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT NOT NULL, completed_today INTEGER NOT NULL)")
         db.execSQL("CREATE TABLE metadata (key TEXT PRIMARY KEY NOT NULL, value TEXT NOT NULL)")
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-        // Future schema changes must use explicit, data-preserving migrations.
+        if (oldVersion < 2) {
+            // Existing records have no reliable transaction date; zero means unknown.
+            db.execSQL("ALTER TABLE money ADD COLUMN created_at INTEGER NOT NULL DEFAULT 0")
+        }
     }
 
     fun migrateLegacyOnce(tasks: List<TaskItem>, money: List<MoneyItem>, habits: List<HabitItem>, habitsDate: String) {
@@ -52,8 +55,8 @@ class LocalDatabase(context: Context) : SQLiteOpenHelper(
 
     fun loadMoney(): List<MoneyItem> {
         val result = mutableListOf<MoneyItem>()
-        readableDatabase.rawQuery("SELECT title, amount, income FROM money ORDER BY id", null).use { cursor ->
-            while (cursor.moveToNext()) result += MoneyItem(cursor.getString(0), cursor.getDouble(1), cursor.getInt(2) == 1)
+        readableDatabase.rawQuery("SELECT title, amount, income, created_at FROM money ORDER BY id", null).use { cursor ->
+            while (cursor.moveToNext()) result += MoneyItem(cursor.getString(0), cursor.getDouble(1), cursor.getInt(2) == 1, cursor.getLong(3))
         }
         return result
     }
@@ -118,6 +121,7 @@ class LocalDatabase(context: Context) : SQLiteOpenHelper(
                 put("title", item.title)
                 put("amount", item.amount)
                 put("income", if (item.income) 1 else 0)
+                put("created_at", item.createdAt)
             }
             db.insertOrThrow("money", null, values)
         }
