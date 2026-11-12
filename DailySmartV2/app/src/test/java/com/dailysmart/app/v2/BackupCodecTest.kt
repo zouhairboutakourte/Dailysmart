@@ -16,6 +16,14 @@ class BackupCodecTest {
     }
 
     @Test
+    fun versionThreeBackupPreservesFinanceTargets() {
+        val bytes = BackupCodec.encode(emptyList(), emptyList(), emptyList(), 5000.0, 1200.0)
+        val snapshot = BackupCodec.decode(bytes)
+        assertEquals(5000.0, snapshot.monthlyBudget!!, 0.001)
+        assertEquals(1200.0, snapshot.monthlySavingsGoal!!, 0.001)
+    }
+
+    @Test
     fun versionTwoBackupPreservesTransactionDates() {
         val timestamp = 1_794_456_000_000L
         val bytes = BackupCodec.encode(

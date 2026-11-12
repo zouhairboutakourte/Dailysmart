@@ -6,17 +6,19 @@ import org.json.JSONObject
 /** Versioned, validated JSON backup for all user-owned DailySmart records. */
 object BackupCodec {
     const val MAX_BACKUP_BYTES = 2 * 1024 * 1024
-    private const val VERSION = 2
+    private const val VERSION = 3
     private const val MAX_RECORDS_PER_SECTION = 10_000
     private const val MAX_TITLE_LENGTH = 500
 
     data class Snapshot(
         val tasks: List<TaskItem>,
         val money: List<MoneyItem>,
-        val habits: List<HabitItem>
+        val habits: List<HabitItem>,
+        val monthlyBudget: Double? = null,
+        val monthlySavingsGoal: Double? = null
     )
 
-    fun encode(tasks: List<TaskItem>, money: List<MoneyItem>, habits: List<HabitItem>): ByteArray {
+    fun encode(tasks: List<TaskItem>, money: List<MoneyItem>, habits: List<HabitItem>, monthlyBudget: Double? = null, monthlySavingsGoal: Double? = null): ByteArray {
         require(tasks.size <= MAX_RECORDS_PER_SECTION && money.size <= MAX_RECORDS_PER_SECTION &&
             habits.size <= MAX_RECORDS_PER_SECTION) { "Too many records to back up." }
         val root = JSONObject().put("app", "DailySmart").put("version", VERSION)
@@ -33,6 +35,8 @@ object BackupCodec {
         root.put("habits", JSONArray().apply {
             habits.forEach { put(JSONObject().put("title", clean(it.title)).put("completedToday", it.completedToday)) }
         })
+        monthlyBudget?.let { require(it.isFinite() && it > 0.0); root.put("monthlyBudget", it) }
+        monthlySavingsGoal?.let { require(it.isFinite() && it > 0.0); root.put("monthlySavingsGoal", it) }
         return root.toString(2).toByteArray(Charsets.UTF_8).also {
             require(it.size <= MAX_BACKUP_BYTES) { "Backup exceeds the 2 MB safety limit." }
         }
@@ -67,7 +71,9 @@ object BackupCodec {
             val item = habitsArray.getJSONObject(i)
             HabitItem(clean(item.getString("title")), item.optBoolean("completedToday", false))
         }
-        return Snapshot(tasks, money, habits)
+        val monthlyBudget = if (root.has("monthlyBudget")) root.getDouble("monthlyBudget").also { require(it.isFinite() && it > 0.0) } else null
+        val monthlySavingsGoal = if (root.has("monthlySavingsGoal")) root.getDouble("monthlySavingsGoal").also { require(it.isFinite() && it > 0.0) } else null
+        return Snapshot(tasks, money, habits, monthlyBudget, monthlySavingsGoal)
     }
 
     private fun clean(value: String): String {

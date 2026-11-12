@@ -15,8 +15,8 @@ android {
         applicationId = "com.dailysmart.app.v2"
         minSdk = 26
         targetSdk = 35
-        versionCode = 11
-        versionName = "2.10.0"
+        versionCode = 12
+        versionName = "2.11.0"
     }
     buildFeatures {
         compose = true

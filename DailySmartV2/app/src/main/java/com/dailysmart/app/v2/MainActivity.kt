@@ -99,6 +99,10 @@ fun DailySmartApp() {
     var command by remember { mutableStateOf("") }
     var newTitle by remember { mutableStateOf("") }
     var newAmount by remember { mutableStateOf("") }
+    var monthlyBudgetDraft by remember { mutableStateOf(prefs.getString("monthly_budget_mad", "") ?: "") }
+    var monthlySavingsDraft by remember { mutableStateOf(prefs.getString("monthly_savings_goal_mad", "") ?: "") }
+    var savedMonthlyBudget by remember { mutableStateOf(prefs.getString("monthly_budget_mad", null)?.toDoubleOrNull()?.takeIf { it.isFinite() && it > 0.0 }) }
+    var savedMonthlySavingsGoal by remember { mutableStateOf(prefs.getString("monthly_savings_goal_mad", null)?.toDoubleOrNull()?.takeIf { it.isFinite() && it > 0.0 }) }
     var info by remember { mutableStateOf(uiText(language, "Your personal workspace is ready.", "Votre espace est prêt.", "مساحتك الشخصية واجدة.")) }
     var pendingRestore by remember { mutableStateOf<BackupCodec.Snapshot?>(null) }
     var pendingAssistantAction by remember { mutableStateOf<AssistantAction?>(null) }
@@ -150,7 +154,7 @@ fun DailySmartApp() {
 
     val backupLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
         if (uri != null) runCatching {
-            val bytes = BackupCodec.encode(tasks, money, habits)
+            val bytes = BackupCodec.encode(tasks, money, habits, savedMonthlyBudget, savedMonthlySavingsGoal)
             context.contentResolver.openOutputStream(uri)?.use { it.write(bytes) }
                 ?: throw IllegalStateException("Could not create backup file.")
             info = "Backup created successfully."
@@ -288,6 +292,14 @@ fun DailySmartApp() {
                         tasks = snapshot.tasks
                         money = snapshot.money
                         habits = snapshot.habits
+                        savedMonthlyBudget = snapshot.monthlyBudget
+                        savedMonthlySavingsGoal = snapshot.monthlySavingsGoal
+                        monthlyBudgetDraft = snapshot.monthlyBudget?.toString() ?: ""
+                        monthlySavingsDraft = snapshot.monthlySavingsGoal?.toString() ?: ""
+                        prefs.edit().apply {
+                            if (snapshot.monthlyBudget == null) remove("monthly_budget_mad") else putString("monthly_budget_mad", snapshot.monthlyBudget.toString())
+                            if (snapshot.monthlySavingsGoal == null) remove("monthly_savings_goal_mad") else putString("monthly_savings_goal_mad", snapshot.monthlySavingsGoal.toString())
+                        }.apply()
                         saveTasks(); saveMoney(); saveHabits()
                         pendingRestore = null
                         info = uiText(language, "Backup restored successfully.", "Sauvegarde restaurée.", "تم استرجاع النسخة الاحتياطية بنجاح.")
@@ -543,6 +555,49 @@ fun DailySmartApp() {
                                 }
                                 if (analytics.undatedRecords > 0) {
                                     Text(uiText(language, "${analytics.undatedRecords} older records have no saved date and are excluded from period totals.", "${analytics.undatedRecords} anciennes opérations n’ont pas de date enregistrée et sont exclues des totaux par période.", "${analytics.undatedRecords} عمليات قديمة ما عندهاش تاريخ محفوظ، وما دخلناهاش فحساب الفترات."), color = Muted, fontSize = 11.sp)
+                                }
+                            }
+                        }
+                        Card(colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(18.dp)) {
+                            Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                                Text(uiText(language, "Monthly budget & savings goals", "Budget mensuel et objectif d’épargne", "ميزانية الشهر وهدف الادخار"), color = White, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                                OutlinedTextField(value = monthlyBudgetDraft, onValueChange = { monthlyBudgetDraft = it.take(20) }, modifier = Modifier.fillMaxWidth(), singleLine = true, placeholder = { Text(uiText(language, "Monthly spending limit (MAD)", "Budget de dépenses mensuel (MAD)", "الميزانية الشهرية للمصاريف (درهم)")) })
+                                Button(onClick = {
+                                    val value = monthlyBudgetDraft.replace(",", ".").toDoubleOrNull()
+                                    if (value != null && value.isFinite() && value > 0.0) {
+                                        savedMonthlyBudget = value
+                                        prefs.edit().putString("monthly_budget_mad", value.toString()).apply()
+                                        info = uiText(language, "Monthly budget saved.", "Budget mensuel enregistré.", "تحفظات الميزانية الشهرية.")
+                                    } else info = uiText(language, "Enter a valid budget greater than zero.", "Saisissez un budget supérieur à zéro.", "دخل ميزانية صحيحة أكبر من صفر.")
+                                }, modifier = Modifier.fillMaxWidth()) { Text(uiText(language, "Save monthly budget", "Enregistrer le budget", "حفظ الميزانية")) }
+                                savedMonthlyBudget?.let { target ->
+                                    val progress = FinanceTargets.progress(analytics.monthExpense, target)
+                                    Text(uiText(language, "Spent this month: \${"%.0f".format(analytics.monthExpense)} / \${"%.0f".format(target)} DH", "Dépensé ce mois : \${"%.0f".format(analytics.monthExpense)} / \${"%.0f".format(target)} DH", "المصاريف هاد الشهر: \${"%.0f".format(analytics.monthExpense)} / \${"%.0f".format(target)} درهم"), color = White, fontSize = 12.sp)
+                                    LinearProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(8.dp)), color = if (FinanceTargets.isOverTarget(analytics.monthExpense, target)) ExpenseColor else Accent, trackColor = PanelRaised)
+                                    Text(
+                                        if (FinanceTargets.isOverTarget(analytics.monthExpense, target))
+                                            uiText(language, "Over budget by \${"%.0f".format(analytics.monthExpense - target)} DH", "Budget dépassé de \${"%.0f".format(analytics.monthExpense - target)} DH", "تجاوزتي الميزانية بـ \${"%.0f".format(analytics.monthExpense - target)} درهم")
+                                        else uiText(language, "\${"%.0f".format(FinanceTargets.remaining(target, analytics.monthExpense))} DH remaining", "Il reste \${"%.0f".format(FinanceTargets.remaining(target, analytics.monthExpense))} DH", "باقي \${"%.0f".format(FinanceTargets.remaining(target, analytics.monthExpense))} درهم"),
+                                        color = if (FinanceTargets.isOverTarget(analytics.monthExpense, target)) ExpenseColor else Accent,
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                }
+                                Divider(color = Muted.copy(alpha = 0.2f))
+                                OutlinedTextField(value = monthlySavingsDraft, onValueChange = { monthlySavingsDraft = it.take(20) }, modifier = Modifier.fillMaxWidth(), singleLine = true, placeholder = { Text(uiText(language, "Monthly savings target (MAD)", "Objectif d’épargne mensuel (MAD)", "هدف الادخار الشهري (درهم)")) })
+                                Button(onClick = {
+                                    val value = monthlySavingsDraft.replace(",", ".").toDoubleOrNull()
+                                    if (value != null && value.isFinite() && value > 0.0) {
+                                        savedMonthlySavingsGoal = value
+                                        prefs.edit().putString("monthly_savings_goal_mad", value.toString()).apply()
+                                        info = uiText(language, "Savings target saved.", "Objectif d’épargne enregistré.", "تحفظ هدف الادخار.")
+                                    } else info = uiText(language, "Enter a valid savings target greater than zero.", "Saisissez un objectif supérieur à zéro.", "دخل هدف ادخار صحيح أكبر من صفر.")
+                                }, modifier = Modifier.fillMaxWidth()) { Text(uiText(language, "Save savings target", "Enregistrer l’objectif", "حفظ هدف الادخار")) }
+                                savedMonthlySavingsGoal?.let { target ->
+                                    val saved = (analytics.monthIncome - analytics.monthExpense).coerceAtLeast(0.0)
+                                    Text(uiText(language, "Saved this month: \${"%.0f".format(saved)} / \${"%.0f".format(target)} DH", "Épargne ce mois : \${"%.0f".format(saved)} / \${"%.0f".format(target)} DH", "الادخار هاد الشهر: \${"%.0f".format(saved)} / \${"%.0f".format(target)} درهم"), color = White, fontSize = 12.sp)
+                                    LinearProgressIndicator(progress = { FinanceTargets.progress(saved, target) }, modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(8.dp)), color = Lavender, trackColor = PanelRaised)
+                                    Text(uiText(language, "\${"%.0f".format(FinanceTargets.remaining(target, saved))} DH to reach your goal", "Encore \${"%.0f".format(FinanceTargets.remaining(target, saved))} DH pour atteindre l’objectif", "باقي \${"%.0f".format(FinanceTargets.remaining(target, saved))} درهم باش توصل لهدفك"), color = Muted, fontSize = 12.sp)
                                 }
                             }
                         }

@@ -2,7 +2,7 @@
 
 Independent Android application built with Kotlin and Jetpack Compose.
 
-## Implemented in version 2.10.0
+## Implemented in version 2.11.0
 - Separate package: `com.dailysmart.app.v2`
 - Premium light interface with a soft blue-white background, white cards, indigo-to-violet gradient hero, mint highlights, refreshed navigation and a redesigned branded launcher icon
 - Branded launcher icon
@@ -13,13 +13,13 @@ Independent Android application built with Kotlin and Jetpack Compose.
 - Offline assistant commands in English, French, Arabic and Darija for common tasks and finance actions
 - Gemini assistant through Firebase AI Logic; can propose one task, expense, income, one-time reminder or finance report from natural language, with explicit confirmation before adding records; uses Firebase App Check and no embedded Gemini API key
 - Finance ledger: income, expenses and MAD balance
-- Finance insights: week/month income and expense totals, month-to-date savings/overspending signal, ranked category breakdown with visual bars, and transaction dates
+- Finance insights: week/month income and expense totals, month-to-date savings/overspending signal, ranked category breakdown with visual bars, transaction dates, persistent monthly spending budget and savings target with progress/over-budget feedback
 - Task list: add, complete and delete
 - Habits: add, daily check-off, reset checkmarks and delete
 - Device-local one-time reminders with date/time selection, notifications and rescheduling after device reboot
 - Finance import/export for DailySmart-format XLSX workbooks and CSV (XLSX imports are limited to 10 MB and bounded ZIP expansion for safety)
 - Settings screen with transparent privacy and feature status
-- Versioned JSON backup and confirmed restore for tasks, finance records and habits
+- Versioned JSON backup and confirmed restore for tasks, finance records, habits, monthly budget and monthly savings target
 - Offline SQLite persistence for tasks, finance records and habits, with a one-time transactional import from existing SharedPreferences records
 - No ads, no subscription, no account and no embedded AI API key
 
