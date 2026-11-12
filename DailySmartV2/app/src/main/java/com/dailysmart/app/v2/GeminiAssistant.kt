@@ -66,7 +66,8 @@ object GeminiAssistant {
             - If amount or description is missing, use action "chat" and ask the user for the missing detail.
             - If the user specifies a currency other than MAD, do not convert it; use action "chat" and ask for clarification.
             - Use finance_report only when the user asks about their own balance, spending, income or finance summary. The app calculates the report locally.
-            - For deleting, editing, reminders, habits or any unsupported operation, use action "chat" and explain that it is not supported yet.
+            - For deleting, editing, habits or any unsupported operation, use action "chat" and explain that it is not supported yet.
+            - If the user asks to create a reminder, use action "chat" and direct them to the Reminders tab; never claim the reminder was scheduled.
             - Do not invent or assume any financial records. You do not receive the user's stored data.
             - Keep reply concise and in the requested language. Use empty strings and amount 0 for fields that do not apply.
 

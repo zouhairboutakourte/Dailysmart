@@ -90,5 +90,5 @@ object AssistantEngine {
 
     fun helpText(): String =
         "Try: add task call the bank · spent 45 DH on coffee · sajel masrouf 50 qhwa · sajel dakhl 8000 salaire · ch7al sraft. " +
-        "You can also use Arabic, French and Darija commands. Offline commands work without internet; Gemini natural-language actions require Firebase setup and an internet connection, and proposed changes always need confirmation."
+        "You can also use Arabic, French and Darija commands. Offline commands and local reminders work without internet; Gemini natural-language actions require Firebase setup and an internet connection, and proposed changes always need confirmation."
 }

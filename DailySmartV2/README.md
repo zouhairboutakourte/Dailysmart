@@ -2,7 +2,7 @@
 
 Independent Android application built with Kotlin and Jetpack Compose.
 
-## Implemented in version 2.6.0
+## Implemented in version 2.7.0
 - Separate package: `com.dailysmart.app.v2`
 - Refreshed dark navy interface with a blue/teal gradient hero, mint/lavender/gold accents, clearer finance colors, daily progress feedback and an offline daily inspiration quote
 - Branded launcher icon
@@ -15,6 +15,7 @@ Independent Android application built with Kotlin and Jetpack Compose.
 - Finance ledger: income, expenses and MAD balance
 - Task list: add, complete and delete
 - Habits: add, daily check-off, reset checkmarks and delete
+- Device-local one-time reminders with date/time selection, notifications and rescheduling after device reboot
 - Finance import/export for DailySmart-format XLSX workbooks and CSV (XLSX imports are limited to 10 MB and bounded ZIP expansion for safety)
 - Settings screen with transparent privacy and feature status
 - Versioned JSON backup and confirmed restore for tasks, finance records and habits
@@ -32,9 +33,9 @@ The app build remains possible without `google-services.json`, but Gemini stays 
 
 ## Not yet implemented
 - Real-device validation of backup/restore, upgrade from an older installed APK and performance is still required
-- Multi-step Gemini workflows, editing/deleting records through Gemini, reminders and habit actions are not implemented; current AI proposals are limited to one new task, one income/expense record, or a local finance report
+- Multi-step Gemini workflows, editing/deleting records through Gemini and habit actions are not implemented; current AI proposals are limited to one new task, one income/expense record, or a local finance report. Reminders are created manually in the Reminders tab.
 - Editing arbitrary Excel workbooks, formulas and charts; XLSX support currently focuses on DailySmart finance transaction sheets
 - Full Arabic, Darija, French and English interface localization
-- Calendar, reminders and goals
+- Calendar and goals; local one-time reminders are now supported
 
-Data protection: JSON backup files are limited to 2 MB and validated before restore; restoring replaces existing records only after explicit confirmation. CSV imports are limited to 5 MB and validate finite positive amounts. XLSX imports enforce a 10 MB source-file limit, a 10 MB total expanded-content limit, a 5 MB per-entry limit and a 64-entry limit. Habit checkmarks reset when the local calendar date changes. The app labels unavailable capabilities honestly; it does not present local command shortcuts as an LLM.
+Data protection: reminders are stored locally and are not included in JSON backups yet. Reminder alarms are inexact and Android may delay delivery to save battery. JSON backup files are limited to 2 MB and validated before restore; restoring replaces existing records only after explicit confirmation. CSV imports are limited to 5 MB and validate finite positive amounts. XLSX imports enforce a 10 MB source-file limit, a 10 MB total expanded-content limit, a 5 MB per-entry limit and a 64-entry limit. Habit checkmarks reset when the local calendar date changes. The app labels unavailable capabilities honestly; it does not present local command shortcuts as an LLM.
