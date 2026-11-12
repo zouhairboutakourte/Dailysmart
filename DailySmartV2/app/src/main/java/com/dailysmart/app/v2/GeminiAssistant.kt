@@ -1,7 +1,7 @@
 package com.dailysmart.app.v2
 
 import android.content.Context
-import com.google.firebase.Firebase
+import com.google.firebase.FirebaseApp
 import com.google.firebase.ai.type.GenerativeBackend
 import com.google.firebase.ai.ai
 import com.google.firebase.appcheck.FirebaseAppCheck
@@ -22,7 +22,7 @@ object GeminiAssistant {
     fun initialize(context: Context): Boolean {
         if (initialized) return true
         return runCatching {
-            Firebase.initialize(context = context.applicationContext)
+            FirebaseApp.initializeApp(context.applicationContext)
             FirebaseAppCheck.getInstance().installAppCheckProviderFactory(
                 if (com.dailysmart.app.v2.BuildConfig.DEBUG) {
                     DebugAppCheckProviderFactory.getInstance()
