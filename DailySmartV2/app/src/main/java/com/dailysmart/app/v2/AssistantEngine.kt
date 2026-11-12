@@ -24,7 +24,7 @@ object AssistantEngine {
             "ajouter une tâche", "ajoute une tâche", "زيد مهمة", "زيد ليا مهمة",
             "أضف مهمة", "مهمة جديدة", "zid mohimma", "zid lia mohimma", "zid liya mohimma",
             "sajel mohimma", "sajel lia mohimma", "sajel liya mohimma", "dir mohimma",
-            "bghit nzid mohimma", "bghit ndir task", "3tini mohimma", "zid task"
+            "bghit nzid mohimma", "bghit ndir task", "3tini mohimma", "zid task", "zid lia task", "zid liya task", "dir lia task", "dir liya task"
         )
         taskPrefixes.firstOrNull { lower.startsWith(it) }?.let { prefix ->
             val title = input.drop(prefix.length).trim().trimStart(':', '-', ' ')
@@ -48,6 +48,7 @@ object AssistantEngine {
             "sarf" to false, "dkhl" to true, "dakhl" to true,
             "sajel dakhl" to true, "sajel lia dakhl" to true, "dkhol" to true,
             "ana dkhelt" to true, "dkhelt" to true, "dkhalt" to true,
+            "dkhel lia" to true, "dkhel liya" to true, "dkhl lia" to true, "d5el lia" to true, "d5el liya" to true, "dkhalt lia" to true, "dkhelt lia" to true, "dkhelt liya" to true, "dkhel" to true,
             "khdemt" to true, "khedmt" to true,
             "j'ai reçu" to true, "j'ai recu" to true,
             "gagné" to true, "gagne" to true,
@@ -75,7 +76,8 @@ object AssistantEngine {
             }
         }
 
-        if (listOf("report", "finance report", "bilan", "rapport", "تقرير", "تقرير مالي", "الحساب", "7sab", "7ssab", "7sab dyali", "ch7al sraft", "ch7al sreft", "ch7al khrejt", "ch7al khssert", "fin mchaw flosi", "ch7al ba9i", "شحال صرفت", "شحال خرجت", "فين مشاو فلوسي").any { lower == it }) {
+        val reportCommands = listOf("report", "finance report", "bilan", "rapport", "تقرير", "تقرير مالي", "الحساب", "7sab", "7ssab", "7sab dyali", "ch7al sraft", "ch7al sreft", "ch7al sreft had chhar", "ch7al sraft had chhar", "ch7al khrejt", "ch7al khssert", "fin mchaw flosi", "ch7al ba9i", "ch7al ba9i lia", "ch7al ba9i f budget", "ch7al ba9i lia f budget", "wach fet l budget", "wach fot l budget", "شحال صرفت", "شحال خرجت", "فين مشاو فلوسي")
+        if (reportCommands.any { lower.trimEnd('?', '!', '.', '؟') == it }) {
             return AssistantAction.FinanceReport
         }
         return AssistantAction.Help
