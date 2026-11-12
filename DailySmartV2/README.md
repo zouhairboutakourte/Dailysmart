@@ -2,7 +2,7 @@
 
 Independent Android application built with Kotlin and Jetpack Compose.
 
-## Implemented in version 2.5
+## Implemented in version 2.6.0
 - Separate package: `com.dailysmart.app.v2`
 - Refreshed dark navy interface with a blue/teal gradient hero, mint/lavender/gold accents, clearer finance colors, and daily progress feedback
 - Branded launcher icon

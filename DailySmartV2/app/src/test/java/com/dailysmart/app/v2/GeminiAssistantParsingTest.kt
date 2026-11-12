@@ -56,7 +56,7 @@ class GeminiAssistantParsingTest {
     @Test
     fun detectsForeignCurrencyWithoutTreatingDirhamsAsForeign() {
         assertTrue(GeminiAssistant.hasNonMadCurrency("I spent 20 euros"))
-        assertTrue(GeminiAssistant.hasNonMadCurrency("paid $15"))
+        assertTrue(GeminiAssistant.hasNonMadCurrency("paid \\$15"))
         assertFalse(GeminiAssistant.hasNonMadCurrency("صرف 45 DH"))
         assertFalse(GeminiAssistant.hasNonMadCurrency("spent 45 MAD"))
     }
