@@ -1,6 +1,7 @@
 package com.dailysmart.app.v2
 
 import android.content.Context
+import com.google.firebase.Firebase
 import com.google.firebase.FirebaseApp
 import com.google.firebase.ai.type.GenerativeBackend
 import com.google.firebase.ai.ai
