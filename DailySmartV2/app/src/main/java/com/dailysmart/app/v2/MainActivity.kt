@@ -572,12 +572,12 @@ fun DailySmartApp() {
                                 }, modifier = Modifier.fillMaxWidth()) { Text(uiText(language, "Save monthly budget", "Enregistrer le budget", "حفظ الميزانية")) }
                                 savedMonthlyBudget?.let { target ->
                                     val progress = FinanceTargets.progress(analytics.monthExpense, target)
-                                    Text(uiText(language, "Spent this month: \${"%.0f".format(analytics.monthExpense)} / \${"%.0f".format(target)} DH", "Dépensé ce mois : \${"%.0f".format(analytics.monthExpense)} / \${"%.0f".format(target)} DH", "المصاريف هاد الشهر: \${"%.0f".format(analytics.monthExpense)} / \${"%.0f".format(target)} درهم"), color = White, fontSize = 12.sp)
+                                    Text(uiText(language, "Spent this month: ${"%.0f".format(analytics.monthExpense)} / ${"%.0f".format(target)} DH", "Dépensé ce mois : ${"%.0f".format(analytics.monthExpense)} / ${"%.0f".format(target)} DH", "المصاريف هاد الشهر: ${"%.0f".format(analytics.monthExpense)} / ${"%.0f".format(target)} درهم"), color = White, fontSize = 12.sp)
                                     LinearProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(8.dp)), color = if (FinanceTargets.isOverTarget(analytics.monthExpense, target)) ExpenseColor else Accent, trackColor = PanelRaised)
                                     Text(
                                         if (FinanceTargets.isOverTarget(analytics.monthExpense, target))
-                                            uiText(language, "Over budget by \${"%.0f".format(analytics.monthExpense - target)} DH", "Budget dépassé de \${"%.0f".format(analytics.monthExpense - target)} DH", "تجاوزتي الميزانية بـ \${"%.0f".format(analytics.monthExpense - target)} درهم")
-                                        else uiText(language, "\${"%.0f".format(FinanceTargets.remaining(target, analytics.monthExpense))} DH remaining", "Il reste \${"%.0f".format(FinanceTargets.remaining(target, analytics.monthExpense))} DH", "باقي \${"%.0f".format(FinanceTargets.remaining(target, analytics.monthExpense))} درهم"),
+                                            uiText(language, "Over budget by ${"%.0f".format(analytics.monthExpense - target)} DH", "Budget dépassé de ${"%.0f".format(analytics.monthExpense - target)} DH", "تجاوزتي الميزانية بـ ${"%.0f".format(analytics.monthExpense - target)} درهم")
+                                        else uiText(language, "${"%.0f".format(FinanceTargets.remaining(target, analytics.monthExpense))} DH remaining", "Il reste ${"%.0f".format(FinanceTargets.remaining(target, analytics.monthExpense))} DH", "باقي ${"%.0f".format(FinanceTargets.remaining(target, analytics.monthExpense))} درهم"),
                                         color = if (FinanceTargets.isOverTarget(analytics.monthExpense, target)) ExpenseColor else Accent,
                                         fontSize = 12.sp,
                                         fontWeight = FontWeight.SemiBold
@@ -595,9 +595,9 @@ fun DailySmartApp() {
                                 }, modifier = Modifier.fillMaxWidth()) { Text(uiText(language, "Save savings target", "Enregistrer l’objectif", "حفظ هدف الادخار")) }
                                 savedMonthlySavingsGoal?.let { target ->
                                     val saved = (analytics.monthIncome - analytics.monthExpense).coerceAtLeast(0.0)
-                                    Text(uiText(language, "Saved this month: \${"%.0f".format(saved)} / \${"%.0f".format(target)} DH", "Épargne ce mois : \${"%.0f".format(saved)} / \${"%.0f".format(target)} DH", "الادخار هاد الشهر: \${"%.0f".format(saved)} / \${"%.0f".format(target)} درهم"), color = White, fontSize = 12.sp)
+                                    Text(uiText(language, "Saved this month: ${"%.0f".format(saved)} / ${"%.0f".format(target)} DH", "Épargne ce mois : ${"%.0f".format(saved)} / ${"%.0f".format(target)} DH", "الادخار هاد الشهر: ${"%.0f".format(saved)} / ${"%.0f".format(target)} درهم"), color = White, fontSize = 12.sp)
                                     LinearProgressIndicator(progress = { FinanceTargets.progress(saved, target) }, modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(8.dp)), color = Lavender, trackColor = PanelRaised)
-                                    Text(uiText(language, "\${"%.0f".format(FinanceTargets.remaining(target, saved))} DH to reach your goal", "Encore \${"%.0f".format(FinanceTargets.remaining(target, saved))} DH pour atteindre l’objectif", "باقي \${"%.0f".format(FinanceTargets.remaining(target, saved))} درهم باش توصل لهدفك"), color = Muted, fontSize = 12.sp)
+                                    Text(uiText(language, "${"%.0f".format(FinanceTargets.remaining(target, saved))} DH to reach your goal", "Encore ${"%.0f".format(FinanceTargets.remaining(target, saved))} DH pour atteindre l’objectif", "باقي ${"%.0f".format(FinanceTargets.remaining(target, saved))} درهم باش توصل لهدفك"), color = Muted, fontSize = 12.sp)
                                 }
                             }
                         }
