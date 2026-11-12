@@ -378,7 +378,7 @@ fun DailySmartApp() {
                                 }
                                 Divider(color = Muted.copy(alpha = 0.25f))
                                 Text("DailySmart V2", color = White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                                Text(uiText(language, "Version 2.5.0 · Android app", "Version 2.5.0 · Application Android", "الإصدار 2.5.0 · تطبيق أندرويد"), color = Muted, fontSize = 12.sp)
+                                Text(uiText(language, "Version 2.6.0 · Android app", "Version 2.6.0 · Application Android", "الإصدار 2.6.0 · تطبيق أندرويد"), color = Muted, fontSize = 12.sp)
                                 Divider(color = Muted.copy(alpha = 0.25f))
                                 Text(uiText(language, "Currency", "Devise", "العملة"), color = Muted, fontSize = 12.sp)
                                 Text(uiText(language, "Moroccan dirham (MAD)", "Dirham marocain (MAD)", "الدرهم المغربي (MAD)"), color = White)
