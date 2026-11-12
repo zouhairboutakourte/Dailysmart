@@ -266,6 +266,7 @@ fun DailySmartApp() {
                                             } finally {
                                                 geminiLoading = false
                                             }
+                                        }
                                     }
                                     command = ""
                                 }
