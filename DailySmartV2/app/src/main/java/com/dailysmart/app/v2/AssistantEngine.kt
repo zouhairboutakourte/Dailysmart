@@ -58,9 +58,9 @@ object AssistantEngine {
                 if (!amount.isFinite() || amount <= 0.0) return AssistantAction.Help
                 var description = rest.removeRange(amountMatch.range).trim()
                 description = description
-                    .replace(Regex("(?i)\\b(dh|dhs|mad|dirham|dirhams)\\b"), " ")
+                    .replace(Regex("(?i)\\b(dh|dhs|mad|dirham|dirhams|درهم|دراهم)\\b|€"), " ")
                     .trim()
-                    .replace(Regex("^(?i)(on|for|at|in|sur|pour|à|au|3la|3la|f|في|على)\\s*"), "")
+                    .replace(Regex("^(?i)(on|for|at|in|sur|pour|à|au|3la|f|في|على)\\s*"), "")
                     .trim(' ', ':', '-', '،', ',')
                 if (description.isBlank()) description = if (isIncome) "Income" else "Expense"
                 if (description.length > 500) return AssistantAction.Help
