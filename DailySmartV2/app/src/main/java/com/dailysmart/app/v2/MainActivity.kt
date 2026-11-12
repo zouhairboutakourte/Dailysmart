@@ -113,6 +113,12 @@ fun DailySmartApp() {
     fun saveTasks() { database.replaceTasks(tasks) }
     fun saveMoney() { database.replaceMoney(money) }
     fun saveHabits() { database.replaceHabits(habits, todayKey()) }
+    fun showFinanceReport() {
+        val totalIncome = money.filter { it.income }.sumOf { it.amount }
+        val totalExpense = money.filterNot { it.income }.sumOf { it.amount }
+        val balance = totalIncome - totalExpense
+        info = "${uiText(language, "Finance report", "Rapport financier", "التقرير المالي")} · ${uiText(language, "Income", "Revenu", "المداخيل")}: ${"%.2f".format(totalIncome)} MAD · ${uiText(language, "Expenses", "Dépenses", "المصاريف")}: ${"%.2f".format(totalExpense)} MAD · ${uiText(language, "Balance", "Solde", "الرصيد")}: ${"%.2f".format(balance)} MAD"
+    }
 
     val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/csv")) { uri ->
         if (uri != null) runCatching {
@@ -278,10 +284,7 @@ fun DailySmartApp() {
                                     pendingAssistantAction = action
                                 }
                                 AssistantAction.FinanceReport -> {
-                                    val totalIncome = money.filter { it.income }.sumOf { it.amount }
-                                    val totalExpense = money.filterNot { it.income }.sumOf { it.amount }
-                                    val balance = totalIncome - totalExpense
-                                    info = "${uiText(language, "Finance report", "Rapport financier", "التقرير المالي")} · ${uiText(language, "Income", "Revenu", "المداخيل")}: ${"%.2f".format(totalIncome)} MAD · ${uiText(language, "Expenses", "Dépenses", "المصاريف")}: ${"%.2f".format(totalExpense)} MAD · ${uiText(language, "Balance", "Solde", "الرصيد")}: ${"%.2f".format(balance)} MAD"
+                                    showFinanceReport()
                                     command = ""
                                 }
                                 AssistantAction.Help -> {
@@ -291,7 +294,13 @@ fun DailySmartApp() {
                                         geminiLoading = true
                                         scope.launch {
                                             try {
-                                                info = GeminiAssistant.ask(c, language)
+                                                val interpretation = GeminiAssistant.interpret(c, language)
+                                                info = interpretation.reply
+                                                when (val aiAction = interpretation.action) {
+                                                    is AssistantAction.AddTask, is AssistantAction.AddMoney -> pendingAssistantAction = aiAction
+                                                    AssistantAction.FinanceReport -> showFinanceReport()
+                                                    else -> Unit
+                                                }
                                             } catch (error: Exception) {
                                                 info = uiText(language, "Gemini request failed: ", "Échec de la requête Gemini : ", "وقع مشكل فالاتصال بـ Gemini: ") + (error.localizedMessage ?: "Unknown error")
                                             } finally {
