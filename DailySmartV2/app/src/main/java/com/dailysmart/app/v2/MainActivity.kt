@@ -171,6 +171,9 @@ fun DailySmartApp() {
         val balance = totalIncome - totalExpense
         info = "${uiText(language, "Finance report", "Rapport financier", "التقرير المالي")} · ${uiText(language, "Income", "Revenu", "المداخيل")}: ${"%.2f".format(totalIncome)} MAD · ${uiText(language, "Expenses", "Dépenses", "المصاريف")}: ${"%.2f".format(totalExpense)} MAD · ${uiText(language, "Balance", "Solde", "الرصيد")}: ${"%.2f".format(balance)} MAD"
     }
+    LaunchedEffect(Unit) {
+        ReminderManager.rescheduleAll(context)
+    }
     LaunchedEffect(tab) {
         if (tab == "Reminders") reminders = ReminderManager.load(context)
     }
