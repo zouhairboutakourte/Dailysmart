@@ -46,9 +46,9 @@ import java.util.Locale
 import java.io.InputStream
 import kotlinx.coroutines.launch
 
-private val Navy = Color(0xFFF4F6FC)
+private val Navy = Color(0xFFF6F7FF)
 private val Panel = Color(0xFFFFFFFF)
-private val PanelRaised = Color(0xFFEDF1FF)
+private val PanelRaised = Color(0xFFEEF2FF)
 private val Accent = Color(0xFF4F46E5)
 private val Lavender = Color(0xFF8B5CF6)
 private val Gold = Color(0xFFF59E0B)
@@ -332,24 +332,24 @@ fun DailySmartApp() {
                 listOf("Assistant", "Finance", "Tasks", "Habits", "Reminders").forEach { name ->
                     NavigationBarItem(selected = tab == name, onClick = { tab = name }, icon = {
                         Icon(when(name) { "Assistant" -> Icons.Default.AutoAwesome; "Finance" -> Icons.Default.AccountBalanceWallet; "Tasks" -> Icons.Default.CheckCircle; "Habits" -> Icons.Default.Favorite; "Reminders" -> Icons.Default.Notifications; "Excel" -> Icons.Default.TableChart; else -> Icons.Default.Settings }, null)
-                    }, label = { Text(uiText(language, name, when(name) { "Assistant" -> "Assistant"; "Finance" -> "Finances"; "Tasks" -> "Tâches"; "Habits" -> "Habitudes"; "Reminders" -> "Rappels"; "Excel" -> "Excel"; else -> "Paramètres" }, when(name) { "Assistant" -> "المساعد"; "Finance" -> "المالية"; "Tasks" -> "المهام"; "Habits" -> "العادات"; "Reminders" -> "التذكيرات"; "Excel" -> "إكسيل"; else -> "الإعدادات" })) }, colors = NavigationBarItemDefaults.colors(selectedIconColor = Accent, selectedTextColor = Accent, indicatorColor = Navy, unselectedTextColor = Muted))
+                    }, label = { Text(uiText(language, name, when(name) { "Assistant" -> "Assistant"; "Finance" -> "Finances"; "Tasks" -> "Tâches"; "Habits" -> "Habitudes"; "Reminders" -> "Rappels"; "Excel" -> "Excel"; else -> "Paramètres" }, when(name) { "Assistant" -> "المساعد"; "Finance" -> "المالية"; "Tasks" -> "المهام"; "Habits" -> "العادات"; "Reminders" -> "التذكيرات"; "Excel" -> "إكسيل"; else -> "الإعدادات" })) }, colors = NavigationBarItemDefaults.colors(selectedIconColor = Accent, selectedTextColor = Accent, indicatorColor = Color(0xFFE8E9FF), unselectedTextColor = Muted))
                 }
             }
         }) { pad ->
-            Column(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Navy, Color(0xFFEAF0FF), Navy))).padding(pad).padding(horizontal = 18.dp).then(if (tab == "Assistant" || tab == "Excel" || tab == "Settings" || tab == "Reminders") Modifier.verticalScroll(rememberScrollState()) else Modifier)) {
+            Column(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Navy, Color(0xFFEEF2FF), Color(0xFFF9FAFF)))).padding(pad).padding(horizontal = 18.dp).then(if (tab == "Assistant" || tab == "Excel" || tab == "Settings" || tab == "Reminders") Modifier.verticalScroll(rememberScrollState()) else Modifier)) {
                 Spacer(Modifier.height(14.dp))
                 Box(
                     Modifier.fillMaxWidth().clip(RoundedCornerShape(26.dp))
-                        .background(Brush.linearGradient(listOf(Color(0xFF203B58), Color(0xFF27345D), Color(0xFF17463F))))
+                        .background(Brush.linearGradient(listOf(Color(0xFF4338CA), Color(0xFF6D4AFF), Color(0xFF2563EB))))
                         .padding(18.dp)
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
-                            Text(uiText(language, "DAILYSMART  •  YOUR PERSONAL SPACE", "DAILYSMART  •  VOTRE ESPACE", "DAILYSMART  •  مساحتك الخاصة"), color = Color(0xFFB9F5E5), fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
+                            Text(uiText(language, "DAILYSMART  •  YOUR PERSONAL SPACE", "DAILYSMART  •  VOTRE ESPACE", "DAILYSMART  •  مساحتك الخاصة"), color = Color(0xFFD9F7FF), fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
                             Spacer(Modifier.height(6.dp))
                             Text(uiText(language, "Your day, under control.", "Votre journée, bien organisée.", "نهارك منظم وتحت السيطرة."), color = Color.White, fontSize = 21.sp, fontWeight = FontWeight.ExtraBold)
                             Spacer(Modifier.height(5.dp))
-                            Text(SimpleDateFormat("EEEE, d MMMM", Locale.forLanguageTag(language)).format(Date()), color = Color(0xFFD0D9EC), fontSize = 12.sp)
+                            Text(SimpleDateFormat("EEEE, d MMMM", Locale.forLanguageTag(language)).format(Date()), color = Color(0xFFE0E7FF), fontSize = 12.sp)
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             Box(Modifier.size(44.dp).clip(RoundedCornerShape(15.dp)).background(Color.White.copy(alpha = 0.16f)).clickable { tab = "Excel" }, contentAlignment = Alignment.Center) {
@@ -665,7 +665,7 @@ fun DailySmartApp() {
                                 }
                                 Divider(color = Muted.copy(alpha = 0.25f))
                                 Text("DailySmart V2", color = White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                                Text(uiText(language, "Version 2.6.0 · Android app", "Version 2.6.0 · Application Android", "الإصدار 2.6.0 · تطبيق أندرويد"), color = Muted, fontSize = 12.sp)
+                                Text(uiText(language, "Version 2.10.0 · Android app", "Version 2.10.0 · Application Android", "الإصدار 2.10.0 · تطبيق أندرويد"), color = Muted, fontSize = 12.sp)
                                 Divider(color = Muted.copy(alpha = 0.25f))
                                 Text(uiText(language, "Currency", "Devise", "العملة"), color = Muted, fontSize = 12.sp)
                                 Text(uiText(language, "Moroccan dirham (MAD)", "Dirham marocain (MAD)", "الدرهم المغربي (MAD)"), color = White)
