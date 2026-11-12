@@ -1,6 +1,9 @@
 package com.dailysmart.app.v2
 
+import android.Manifest
 import android.content.Context
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -31,6 +34,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import java.time.Instant
+import java.time.LocalDate
+import java.time.LocalTime
+import java.time.ZoneId
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -58,6 +67,7 @@ data class TaskItem(val title: String, val done: Boolean = false)
 data class MoneyItem(val title: String, val amount: Double, val income: Boolean, val createdAt: Long = System.currentTimeMillis())
 data class HabitItem(val title: String, val completedToday: Boolean = false)
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DailySmartApp() {
     val context = LocalContext.current
@@ -92,6 +102,46 @@ fun DailySmartApp() {
     var info by remember { mutableStateOf(uiText(language, "Your personal workspace is ready.", "Votre espace est prêt.", "مساحتك الشخصية واجدة.")) }
     var pendingRestore by remember { mutableStateOf<BackupCodec.Snapshot?>(null) }
     var pendingAssistantAction by remember { mutableStateOf<AssistantAction?>(null) }
+    var reminders by remember { mutableStateOf(ReminderManager.load(context)) }
+    var reminderTitle by remember { mutableStateOf("") }
+    var reminderDate by remember { mutableStateOf(LocalDate.now()) }
+    val defaultReminderTime = remember { LocalTime.now().plusMinutes(30) }
+    var reminderHour by remember { mutableIntStateOf(defaultReminderTime.hour) }
+    var reminderMinute by remember { mutableIntStateOf(defaultReminderTime.minute) }
+    var showDatePicker by remember { mutableStateOf(false) }
+    var showTimePicker by remember { mutableStateOf(false) }
+    var pendingReminder by remember { mutableStateOf<ReminderItem?>(null) }
+    val datePickerState = rememberDatePickerState(
+        initialSelectedDateMillis = LocalDate.now().atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
+    )
+    val timePickerState = rememberTimePickerState(
+        initialHour = defaultReminderTime.hour,
+        initialMinute = defaultReminderTime.minute,
+        is24Hour = true
+    )
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        val item = pendingReminder
+        if (item != null) {
+            if (granted) {
+                ReminderManager.schedule(context, item)
+                reminders = ReminderManager.load(context)
+                info = uiText(language, "Reminder scheduled.", "Rappel programmé.", "تسجل التذكير.")
+            } else {
+                info = uiText(language, "Allow notifications to receive reminders.", "Autorisez les notifications pour recevoir les rappels.", "سمح بالإشعارات باش توصلك التذكيرات.")
+            }
+            pendingReminder = null
+        }
+    }
+    fun scheduleReminder(item: ReminderItem) {
+        if (Build.VERSION.SDK_INT >= 33 && context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            pendingReminder = item
+            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        } else {
+            ReminderManager.schedule(context, item)
+            reminders = ReminderManager.load(context)
+            info = uiText(language, "Reminder scheduled. Android may deliver it a little later to save battery.", "Rappel programmé. Android peut le livrer avec un léger retard pour économiser la batterie.", "تسجل التذكير. ممكن أندرويد يأخر الإشعار شوية لتوفير البطارية.")
+        }
+    }
 
     val backupLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
         if (uri != null) runCatching {
@@ -226,16 +276,47 @@ fun DailySmartApp() {
                 dismissButton = { TextButton(onClick = { pendingRestore = null }) { Text(uiText(language, "Cancel", "Annuler", "إلغاء")) } }
             )
         }
+        if (showDatePicker) {
+            DatePickerDialog(
+                onDismissRequest = { showDatePicker = false },
+                confirmButton = {
+                    TextButton(onClick = {
+                        datePickerState.selectedDateMillis?.let { reminderDate = Instant.ofEpochMilli(it).atZone(ZoneOffset.UTC).toLocalDate() }
+                        showDatePicker = false
+                    }) { Text(uiText(language, "OK", "OK", "موافق")) }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showDatePicker = false }) { Text(uiText(language, "Cancel", "Annuler", "إلغاء")) }
+                }
+            ) { DatePicker(state = datePickerState) }
+        }
+        if (showTimePicker) {
+            AlertDialog(
+                onDismissRequest = { showTimePicker = false },
+                title = { Text(uiText(language, "Choose reminder time", "Choisir l’heure du rappel", "اختار وقت التذكير")) },
+                text = { TimePicker(state = timePickerState) },
+                confirmButton = {
+                    TextButton(onClick = {
+                        reminderHour = timePickerState.hour
+                        reminderMinute = timePickerState.minute
+                        showTimePicker = false
+                    }) { Text(uiText(language, "OK", "OK", "موافق")) }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showTimePicker = false }) { Text(uiText(language, "Cancel", "Annuler", "إلغاء")) }
+                }
+            )
+        }
         Scaffold(containerColor = Color.Transparent, bottomBar = {
             NavigationBar(containerColor = Panel, tonalElevation = 12.dp) {
-                listOf("Assistant", "Finance", "Tasks", "Habits").forEach { name ->
+                listOf("Assistant", "Finance", "Tasks", "Habits", "Reminders").forEach { name ->
                     NavigationBarItem(selected = tab == name, onClick = { tab = name }, icon = {
-                        Icon(when(name) { "Assistant" -> Icons.Default.AutoAwesome; "Finance" -> Icons.Default.AccountBalanceWallet; "Tasks" -> Icons.Default.CheckCircle; "Habits" -> Icons.Default.Favorite; "Excel" -> Icons.Default.TableChart; else -> Icons.Default.Settings }, null)
-                    }, label = { Text(uiText(language, name, when(name) { "Assistant" -> "Assistant"; "Finance" -> "Finances"; "Tasks" -> "Tâches"; "Habits" -> "Habitudes"; "Excel" -> "Excel"; else -> "Paramètres" }, when(name) { "Assistant" -> "المساعد"; "Finance" -> "المالية"; "Tasks" -> "المهام"; "Habits" -> "العادات"; "Excel" -> "إكسيل"; else -> "الإعدادات" })) }, colors = NavigationBarItemDefaults.colors(selectedIconColor = Accent, selectedTextColor = Accent, indicatorColor = Navy, unselectedTextColor = Muted))
+                        Icon(when(name) { "Assistant" -> Icons.Default.AutoAwesome; "Finance" -> Icons.Default.AccountBalanceWallet; "Tasks" -> Icons.Default.CheckCircle; "Habits" -> Icons.Default.Favorite; "Reminders" -> Icons.Default.Notifications; "Excel" -> Icons.Default.TableChart; else -> Icons.Default.Settings }, null)
+                    }, label = { Text(uiText(language, name, when(name) { "Assistant" -> "Assistant"; "Finance" -> "Finances"; "Tasks" -> "Tâches"; "Habits" -> "Habitudes"; "Reminders" -> "Rappels"; "Excel" -> "Excel"; else -> "Paramètres" }, when(name) { "Assistant" -> "المساعد"; "Finance" -> "المالية"; "Tasks" -> "المهام"; "Habits" -> "العادات"; "Reminders" -> "التذكيرات"; "Excel" -> "إكسيل"; else -> "الإعدادات" })) }, colors = NavigationBarItemDefaults.colors(selectedIconColor = Accent, selectedTextColor = Accent, indicatorColor = Navy, unselectedTextColor = Muted))
                 }
             }
         }) { pad ->
-            Column(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Navy, Color(0xFFEAF0FF), Navy))).padding(pad).padding(horizontal = 18.dp).then(if (tab == "Assistant" || tab == "Excel" || tab == "Settings") Modifier.verticalScroll(rememberScrollState()) else Modifier)) {
+            Column(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Navy, Color(0xFFEAF0FF), Navy))).padding(pad).padding(horizontal = 18.dp).then(if (tab == "Assistant" || tab == "Excel" || tab == "Settings" || tab == "Reminders") Modifier.verticalScroll(rememberScrollState()) else Modifier)) {
                 Spacer(Modifier.height(14.dp))
                 Box(
                     Modifier.fillMaxWidth().clip(RoundedCornerShape(26.dp))
@@ -442,6 +523,75 @@ fun DailySmartApp() {
                             }
                         }
                         OutlinedButton(onClick = { habits = habits.map { it.copy(completedToday = false) }; saveHabits() }, modifier = Modifier.fillMaxWidth()) { Text(uiText(language, "Reset daily checkmarks", "Réinitialiser les coches", "إعادة ضبط علامات اليوم")) }
+                    }
+                    "Reminders" -> {
+                        Text(uiText(language, "REMINDERS", "RAPPELS", "التذكيرات"), color = Muted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Card(colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(18.dp)) {
+                            Column(Modifier.fillMaxWidth().padding(15.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                Text(uiText(language, "Create a reminder", "Créer un rappel", "إنشاء تذكير"), color = White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                                OutlinedTextField(
+                                    value = reminderTitle,
+                                    onValueChange = { if (it.length <= 180) reminderTitle = it },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    singleLine = true,
+                                    placeholder = { Text(uiText(language, "What should DailySmart remind you?", "Que doit vous rappeler DailySmart ?", "شنو بغيتي DailySmart يفكرك به؟")) }
+                                )
+                                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    OutlinedButton(onClick = { showDatePicker = true }, modifier = Modifier.weight(1f)) {
+                                        Icon(Icons.Default.CalendarMonth, null)
+                                        Spacer(Modifier.width(5.dp))
+                                        Text(DateTimeFormatter.ofPattern("dd MMM", Locale.forLanguageTag(language)).format(reminderDate), fontSize = 12.sp)
+                                    }
+                                    OutlinedButton(onClick = { showTimePicker = true }, modifier = Modifier.weight(1f)) {
+                                        Icon(Icons.Default.Schedule, null)
+                                        Spacer(Modifier.width(5.dp))
+                                        Text("${reminderHour.toString().padStart(2, '0')}:${reminderMinute.toString().padStart(2, '0')}", fontSize = 12.sp)
+                                    }
+                                }
+                                Button(
+                                    onClick = {
+                                        val triggerAt = ReminderManager.epochMillis(reminderDate, reminderHour, reminderMinute, ZoneId.systemDefault())
+                                        if (reminderTitle.isBlank()) {
+                                            info = uiText(language, "Enter a reminder title.", "Saisissez le texte du rappel.", "كتب شنو بغيتي تتذكر.")
+                                        } else if (triggerAt <= System.currentTimeMillis()) {
+                                            info = uiText(language, "Choose a future date and time.", "Choisissez une date et une heure futures.", "اختار تاريخ ووقت فالمستقبل.")
+                                        } else {
+                                            scheduleReminder(ReminderItem(System.currentTimeMillis(), reminderTitle.trim(), triggerAt))
+                                            reminderTitle = ""
+                                        }
+                                    },
+                                    enabled = reminderTitle.isNotBlank(),
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(14.dp)
+                                ) {
+                                    Icon(Icons.Default.AddAlarm, null)
+                                    Spacer(Modifier.width(7.dp))
+                                    Text(uiText(language, "Schedule reminder", "Programmer le rappel", "برمج التذكير"))
+                                }
+                                Text(uiText(language, "Reminders are stored on this device. Android may delay delivery slightly to save battery.", "Les rappels restent sur cet appareil. Android peut retarder légèrement leur livraison pour économiser la batterie.", "التذكيرات كتخزن فهاد الهاتف. ممكن أندرويد يأخر الإشعار شوية لتوفير البطارية."), color = Muted, fontSize = 11.sp)
+                            }
+                        }
+                        Spacer(Modifier.height(12.dp))
+                        Text(uiText(language, "UPCOMING", "À VENIR", "التذكيرات القادمة"), color = Muted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        if (reminders.isEmpty()) {
+                            Text(uiText(language, "No reminders yet.", "Aucun rappel pour le moment.", "ما كاين حتى تذكير دابا."), color = Muted, fontSize = 13.sp, modifier = Modifier.padding(vertical = 12.dp))
+                        } else {
+                            reminders.sortedBy { it.triggerAt }.forEach { reminder ->
+                                Card(colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(14.dp)) {
+                                    Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                                        Column(Modifier.weight(1f)) {
+                                            Text(reminder.title, color = White, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                                            Text(SimpleDateFormat("EEE, dd MMM yyyy · HH:mm", Locale.forLanguageTag(language)).format(Date(reminder.triggerAt)), color = Muted, fontSize = 11.sp)
+                                        }
+                                        IconButton(onClick = {
+                                            ReminderManager.cancel(context, reminder.id)
+                                            reminders = ReminderManager.load(context)
+                                            info = uiText(language, "Reminder cancelled.", "Rappel annulé.", "تلغى التذكير.")
+                                        }) { Icon(Icons.Default.Delete, null, tint = Muted) }
+                                    }
+                                }
+                            }
+                        }
                     }
                     "Settings" -> {
                         Text(uiText(language, "SETTINGS", "PARAMÈTRES", "الإعدادات"), color = Muted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
