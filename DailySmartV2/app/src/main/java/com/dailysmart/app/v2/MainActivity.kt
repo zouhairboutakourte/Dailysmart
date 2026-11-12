@@ -381,7 +381,7 @@ fun DailySmartApp() {
                         Button(onClick = {
                             val c = command.trim()
                             when (val action = AssistantEngine.parse(c)) {
-                                is AssistantAction.AddTask, is AssistantAction.AddMoney -> {
+                                is AssistantAction.AddTask, is AssistantAction.AddMoney, is AssistantAction.AddReminder -> {
                                     pendingAssistantAction = action
                                 }
                                 AssistantAction.FinanceReport -> {
