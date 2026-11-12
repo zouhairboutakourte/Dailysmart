@@ -67,7 +67,7 @@ object AssistantEngine {
                     .replace(Regex("(?i)(?:^|\\s)(?:dh|dhs|mad|dirham|dirhams)(?=\\s|$)|€|درهم|دراهم"), " ")
                     .replace(Regex("\\s+"), " ")
                     .trim()
-                    .replace(Regex("^(?i)(on|for|at|in|sur|pour|à|au|3la|f|في|على)\\s*"), "")
+                    .replace(Regex("^(?i)(on|for|at|in|sur|pour|à|au|3la|f|l|في|على)\\s*"), "")
                     .trim(' ', ':', '-', '،', ',')
                 if (description.isBlank()) description = if (isIncome) "Income" else "Expense"
                 if (description.length > 500) return AssistantAction.Help
