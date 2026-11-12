@@ -2,7 +2,7 @@
 
 Independent Android application built with Kotlin and Jetpack Compose.
 
-## Implemented in version 2.7.0
+## Implemented in version 2.8.0
 - Separate package: `com.dailysmart.app.v2`
 - Refreshed dark navy interface with a blue/teal gradient hero, mint/lavender/gold accents, clearer finance colors, daily progress feedback and an offline daily inspiration quote
 - Branded launcher icon
@@ -33,7 +33,7 @@ The app build remains possible without `google-services.json`, but Gemini stays 
 
 ## Not yet implemented
 - Real-device validation of backup/restore, upgrade from an older installed APK and performance is still required
-- Multi-step Gemini workflows, editing/deleting records through Gemini and habit actions are not implemented; current AI proposals are limited to one new task, one income/expense record, one-time reminder with a clear future date/time, or a local finance report. Reminders can also be created manually in the Reminders tab.
+- Multi-step Gemini workflows, editing/deleting records through Gemini, recurring reminders and habit actions are not implemented; current AI proposals are limited to one new task, one income/expense record, one-time reminder with a clear future date/time, or a local finance report. Reminders can also be created manually in the Reminders tab.
 - Editing arbitrary Excel workbooks, formulas and charts; XLSX support currently focuses on DailySmart finance transaction sheets
 - Full Arabic, Darija, French and English interface localization
 - Calendar and goals; local one-time reminders are now supported
