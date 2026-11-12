@@ -111,6 +111,7 @@ fun DailySmartApp() {
     var showDatePicker by remember { mutableStateOf(false) }
     var showTimePicker by remember { mutableStateOf(false) }
     var pendingReminder by remember { mutableStateOf<ReminderItem?>(null) }
+    var reminderMessage by remember { mutableStateOf("") }
     val datePickerState = rememberDatePickerState(
         initialSelectedDateMillis = LocalDate.now().atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
     )
@@ -125,9 +126,10 @@ fun DailySmartApp() {
             if (granted) {
                 ReminderManager.schedule(context, item)
                 reminders = ReminderManager.load(context)
-                info = uiText(language, "Reminder scheduled.", "Rappel programmé.", "تسجل التذكير.")
+                reminderMessage = uiText(language, "Reminder scheduled.", "Rappel programmé.", "تسجل التذكير.")
             } else {
-                info = uiText(language, "Allow notifications to receive reminders.", "Autorisez les notifications pour recevoir les rappels.", "سمح بالإشعارات باش توصلك التذكيرات.")
+                reminderTitle = item.title
+                reminderMessage = uiText(language, "Allow notifications to receive reminders.", "Autorisez les notifications pour recevoir les rappels.", "سمح بالإشعارات باش توصلك التذكيرات.")
             }
             pendingReminder = null
         }
@@ -139,7 +141,7 @@ fun DailySmartApp() {
         } else {
             ReminderManager.schedule(context, item)
             reminders = ReminderManager.load(context)
-            info = uiText(language, "Reminder scheduled. Android may deliver it a little later to save battery.", "Rappel programmé. Android peut le livrer avec un léger retard pour économiser la batterie.", "تسجل التذكير. ممكن أندرويد يأخر الإشعار شوية لتوفير البطارية.")
+            reminderMessage = uiText(language, "Reminder scheduled. Android may deliver it a little later to save battery.", "Rappel programmé. Android peut le livrer avec un léger retard pour économiser la batterie.", "تسجل التذكير. ممكن أندرويد يأخر الإشعار شوية لتوفير البطارية.")
         }
     }
 
@@ -168,6 +170,9 @@ fun DailySmartApp() {
         val totalExpense = money.filterNot { it.income }.sumOf { it.amount }
         val balance = totalIncome - totalExpense
         info = "${uiText(language, "Finance report", "Rapport financier", "التقرير المالي")} · ${uiText(language, "Income", "Revenu", "المداخيل")}: ${"%.2f".format(totalIncome)} MAD · ${uiText(language, "Expenses", "Dépenses", "المصاريف")}: ${"%.2f".format(totalExpense)} MAD · ${uiText(language, "Balance", "Solde", "الرصيد")}: ${"%.2f".format(balance)} MAD"
+    }
+    LaunchedEffect(tab) {
+        if (tab == "Reminders") reminders = ReminderManager.load(context)
     }
 
     val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/csv")) { uri ->
@@ -552,9 +557,9 @@ fun DailySmartApp() {
                                     onClick = {
                                         val triggerAt = ReminderManager.epochMillis(reminderDate, reminderHour, reminderMinute, ZoneId.systemDefault())
                                         if (reminderTitle.isBlank()) {
-                                            info = uiText(language, "Enter a reminder title.", "Saisissez le texte du rappel.", "كتب شنو بغيتي تتذكر.")
+                                            reminderMessage = uiText(language, "Enter a reminder title.", "Saisissez le texte du rappel.", "كتب شنو بغيتي تتذكر.")
                                         } else if (triggerAt <= System.currentTimeMillis()) {
-                                            info = uiText(language, "Choose a future date and time.", "Choisissez une date et une heure futures.", "اختار تاريخ ووقت فالمستقبل.")
+                                            reminderMessage = uiText(language, "Choose a future date and time.", "Choisissez une date et une heure futures.", "اختار تاريخ ووقت فالمستقبل.")
                                         } else {
                                             scheduleReminder(ReminderItem(System.currentTimeMillis(), reminderTitle.trim(), triggerAt))
                                             reminderTitle = ""
@@ -586,7 +591,7 @@ fun DailySmartApp() {
                                         IconButton(onClick = {
                                             ReminderManager.cancel(context, reminder.id)
                                             reminders = ReminderManager.load(context)
-                                            info = uiText(language, "Reminder cancelled.", "Rappel annulé.", "تلغى التذكير.")
+                                            reminderMessage = uiText(language, "Reminder cancelled.", "Rappel annulé.", "تلغى التذكير.")
                                         }) { Icon(Icons.Default.Delete, null, tint = Muted) }
                                     }
                                 }

@@ -45,7 +45,7 @@ object ReminderManager {
                 val id = item.optLong("id", 0L)
                 val title = item.optString("title").trim()
                 val triggerAt = item.optLong("triggerAt", 0L)
-                if (id > 0L && title.isNotBlank() && triggerAt > 0L) {
+                if (id > 0L && title.isNotBlank() && triggerAt > System.currentTimeMillis()) {
                     add(ReminderItem(id, title, triggerAt))
                 }
             }
@@ -103,7 +103,7 @@ object ReminderManager {
         ) return
         ensureChannel(context)
         val notification = Notification.Builder(context, CHANNEL_ID)
-            .setSmallIcon(android.R.drawable.ic_popup_reminder)
+            .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setContentTitle("DailySmart")
             .setContentText(reminder.title)
             .setAutoCancel(true)
