@@ -490,18 +490,56 @@ fun DailySmartApp() {
                         Card(colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(16.dp)) {
                             Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                 Text(uiText(language, "Spending by period", "Dépenses par période", "المصاريف حسب الفترة"), fontWeight = FontWeight.Bold, color = White)
+                                Text(uiText(language, "This week", "Cette semaine", "هاد الأسبوع"), color = Muted, fontSize = 12.sp)
                                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                    Text(uiText(language, "This week", "Cette semaine", "هاد الأسبوع"), color = Muted)
+                                    Text(uiText(language, "Income", "Revenus", "المداخيل"), color = Muted)
+                                    Text("${"%.0f".format(analytics.weekIncome)} DH", color = Accent, fontWeight = FontWeight.Bold)
+                                }
+                                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                    Text(uiText(language, "Expenses", "Dépenses", "المصاريف"), color = Muted)
                                     Text("${"%.0f".format(analytics.weekExpense)} DH", color = ExpenseColor, fontWeight = FontWeight.Bold)
                                 }
+                                Divider(color = Muted.copy(alpha = 0.2f))
+                                Text(uiText(language, "This month", "Ce mois", "هاد الشهر"), color = Muted, fontSize = 12.sp)
                                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                    Text(uiText(language, "This month", "Ce mois", "هاد الشهر"), color = Muted)
+                                    Text(uiText(language, "Income", "Revenus", "المداخيل"), color = Muted)
+                                    Text("${"%.0f".format(analytics.monthIncome)} DH", color = Accent, fontWeight = FontWeight.Bold)
+                                }
+                                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                    Text(uiText(language, "Expenses", "Dépenses", "المصاريف"), color = Muted)
                                     Text("${"%.0f".format(analytics.monthExpense)} DH", color = ExpenseColor, fontWeight = FontWeight.Bold)
                                 }
-                                val topCategory = analytics.topExpenseCategory
-                                if (topCategory != null) {
+                                val monthBalance = analytics.monthIncome - analytics.monthExpense
+                                if (analytics.monthIncome > 0.0) {
+                                    val savedPercent = (monthBalance / analytics.monthIncome * 100.0).coerceIn(-100.0, 100.0)
+                                    Text(
+                                        if (monthBalance >= 0.0)
+                                            "${uiText(language, "Month-to-date savings", "Épargne depuis le début du mois", "الادخار من بداية الشهر")}: ${"%.0f".format(savedPercent)}%"
+                                        else
+                                            "${uiText(language, "Overspending", "Dépenses supérieures aux revenus", "المصاريف فاتو المداخيل")}: ${"%.0f".format(-monthBalance)} DH",
+                                        color = if (monthBalance >= 0.0) Accent else ExpenseColor,
+                                        fontWeight = FontWeight.SemiBold,
+                                        fontSize = 12.sp
+                                    )
+                                }
+                                if (analytics.categoryExpenses.isNotEmpty()) {
                                     Divider(color = Muted.copy(alpha = 0.2f))
-                                    Text("${uiText(language, "Top category this month", "Catégorie principale du mois", "أكثر فئة صرفتي فيها هاد الشهر")}: ${financeCategoryText(language, topCategory.first)} · ${"%.0f".format(topCategory.second)} DH", color = Accent, fontSize = 12.sp)
+                                    Text(uiText(language, "Where your money goes", "Répartition des dépenses", "فين كيمشيو فلوسك"), fontWeight = FontWeight.Bold, color = White)
+                                    val categoryMax = analytics.categoryExpenses.first().second.coerceAtLeast(1.0)
+                                    analytics.categoryExpenses.take(5).forEach { (category, amount) ->
+                                        Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                                Text(financeCategoryText(language, category), color = White, fontSize = 12.sp)
+                                                Text("${"%.0f".format(amount)} DH", color = ExpenseColor, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                                            }
+                                            LinearProgressIndicator(
+                                                progress = { (amount / categoryMax).toFloat().coerceIn(0f, 1f) },
+                                                modifier = Modifier.fillMaxWidth().height(7.dp).clip(RoundedCornerShape(8.dp)),
+                                                color = ExpenseColor,
+                                                trackColor = PanelRaised
+                                            )
+                                        }
+                                    }
                                 }
                                 if (analytics.undatedRecords > 0) {
                                     Text(uiText(language, "${analytics.undatedRecords} older records have no saved date and are excluded from period totals.", "${analytics.undatedRecords} anciennes opérations n’ont pas de date enregistrée et sont exclues des totaux par période.", "${analytics.undatedRecords} عمليات قديمة ما عندهاش تاريخ محفوظ، وما دخلناهاش فحساب الفترات."), color = Muted, fontSize = 11.sp)
@@ -515,7 +553,7 @@ fun DailySmartApp() {
                             OutlinedButton(onClick = { val a = newAmount.replace(",", ".").toDoubleOrNull(); if (a != null && a.isFinite() && a > 0) { money = money + MoneyItem(newTitle.ifBlank { uiText(language, "Expense", "Dépense", "مصروف") }, a, false); saveMoney(); newTitle = ""; newAmount = "" } else { info = uiText(language, "Enter a valid amount greater than zero.", "Saisissez un montant valide supérieur à zéro.", "دخل مبلغ صحيح أكبر من صفر.") } }, modifier = Modifier.weight(1f)) { Text(uiText(language, "Add expense", "Ajouter une dépense", "إضافة مصروف")) }
                         }
                         if (money.isEmpty()) Text(uiText(language, "No transactions yet. Add your first income or expense.", "Aucune opération pour le moment.", "ما كايناش عمليات مالية دابا. زيد أول مدخول أو مصروف."), color = Muted, fontSize = 13.sp, modifier = Modifier.padding(vertical = 14.dp))
-                        LazyColumn(modifier = Modifier.weight(1f)) { itemsIndexed(money.reversed()) { index, item -> ListItem(headlineContent = { Text(item.title) }, supportingContent = { Text(if(item.income) uiText(language, "Income", "Revenu", "مدخول") else uiText(language, "Expense", "Dépense", "مصروف"), color = Muted) }, trailingContent = { Row(verticalAlignment = Alignment.CenterVertically) { Text("${if(item.income) "+" else "-"}${item.amount} DH", color = if(item.income) Accent else ExpenseColor, fontWeight = FontWeight.Bold); IconButton(onClick = { val originalIndex = money.lastIndex - index; money = money.toMutableList().also { it.removeAt(originalIndex) }; saveMoney() }) { Icon(Icons.Default.Delete, uiText(language, "Delete", "Supprimer", "حذف"), tint = Muted) } } }, colors = ListItemDefaults.colors(containerColor = Panel)) } }
+                        LazyColumn(modifier = Modifier.weight(1f)) { itemsIndexed(money.reversed()) { index, item -> ListItem(headlineContent = { Text(item.title) }, supportingContent = { Column { Text(if(item.income) uiText(language, "Income", "Revenu", "مدخول") else uiText(language, "Expense", "Dépense", "مصروف"), color = Muted); Text(FinanceAnalytics.dateString(item.createdAt).ifBlank { uiText(language, "Date unavailable", "Date indisponible", "التاريخ غير متوفر") }, color = Muted, fontSize = 11.sp) } }, trailingContent = { Row(verticalAlignment = Alignment.CenterVertically) { Text("${if(item.income) "+" else "-"}${item.amount} DH", color = if(item.income) Accent else ExpenseColor, fontWeight = FontWeight.Bold); IconButton(onClick = { val originalIndex = money.lastIndex - index; money = money.toMutableList().also { it.removeAt(originalIndex) }; saveMoney() }) { Icon(Icons.Default.Delete, uiText(language, "Delete", "Supprimer", "حذف"), tint = Muted) } } }, colors = ListItemDefaults.colors(containerColor = Panel)) } }
                     }
                     "Habits" -> {
                         Text(uiText(language, "DAILY HABITS", "HABITUDES QUOTIDIENNES", "العادات اليومية"), color = Muted, fontSize = 11.sp, fontWeight = FontWeight.Bold)

@@ -13,6 +13,7 @@ data class FinancePeriodSummary(
     val monthIncome: Double,
     val monthExpense: Double,
     val topExpenseCategory: Pair<String, Double>?,
+    val categoryExpenses: List<Pair<String, Double>>,
     val undatedRecords: Int
 )
 
@@ -28,18 +29,20 @@ object FinanceAnalytics {
             records.filter { it.first.income == income }.sumOf { it.first.amount }
         val thisWeek = dated.filter { !it.second.isBefore(weekStart) && !it.second.isAfter(today) }
         val thisMonth = dated.filter { !it.second.isBefore(monthStart) && !it.second.isAfter(today) }
-        val top = thisMonth.asSequence()
+        val categoryExpenses = thisMonth.asSequence()
             .filter { !it.first.income }
             .groupBy { categoryFor(it.first.title) }
             .mapValues { (_, values) -> values.sumOf { it.first.amount } }
-            .maxByOrNull { it.value }
-            ?.let { it.key to it.value }
+            .entries
+            .sortedByDescending { it.value }
+            .map { it.key to it.value }
         return FinancePeriodSummary(
             weekIncome = total(thisWeek, true),
             weekExpense = total(thisWeek, false),
             monthIncome = total(thisMonth, true),
             monthExpense = total(thisMonth, false),
-            topExpenseCategory = top,
+            topExpenseCategory = categoryExpenses.firstOrNull(),
+            categoryExpenses = categoryExpenses,
             undatedRecords = items.count { it.createdAt <= 0L }
         )
     }

@@ -24,6 +24,23 @@ class FinanceAnalyticsTest {
         assertEquals(8000.0, result.monthIncome, 0.001)
         assertEquals(1, result.undatedRecords)
         assertEquals("Alimentation", result.topExpenseCategory?.first)
+        assertEquals(listOf("Alimentation" to 120.0, "Transport" to 30.0), result.categoryExpenses)
+        assertEquals(8000.0, result.weekIncome, 0.001)
+    }
+
+    @Test
+    fun categoryBreakdownIsSortedAndIgnoresIncomeAndUndatedExpenses() {
+        val today = LocalDate.of(2026, 11, 12)
+        val zone = ZoneId.of("UTC")
+        fun at(day: LocalDate) = day.atStartOfDay(zone).toInstant().toEpochMilli()
+        val records = listOf(
+            MoneyItem("Taxi", 50.0, false, at(today)),
+            MoneyItem("Groceries", 90.0, false, at(today)),
+            MoneyItem("Salary", 9000.0, true, at(today)),
+            MoneyItem("Old coffee", 300.0, false, 0L)
+        )
+        val result = FinanceAnalytics.summarize(records, today, zone)
+        assertEquals(listOf("Alimentation" to 90.0, "Transport" to 50.0), result.categoryExpenses)
     }
 
     @Test
