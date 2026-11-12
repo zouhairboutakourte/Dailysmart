@@ -36,15 +36,15 @@ import java.util.Date
 import java.util.Locale
 import java.io.InputStream
 
-private val Navy = Color(0xFF080F1F)
-private val Panel = Color(0xFF121E34)
-private val PanelRaised = Color(0xFF1A2944)
-private val Accent = Color(0xFF76E6C6)
-private val Lavender = Color(0xFF9C9BFF)
-private val Gold = Color(0xFFFFC978)
-private val ExpenseColor = Color(0xFFFF8D9B)
-private val Muted = Color(0xFF9AABC4)
-private val White = Color(0xFFF4F7FF)
+private val Navy = Color(0xFFF4F6FC)
+private val Panel = Color(0xFFFFFFFF)
+private val PanelRaised = Color(0xFFEDF1FF)
+private val Accent = Color(0xFF4F46E5)
+private val Lavender = Color(0xFF8B5CF6)
+private val Gold = Color(0xFFF59E0B)
+private val ExpenseColor = Color(0xFFE85D75)
+private val Muted = Color(0xFF64748B)
+private val White = Color(0xFF182235)
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -156,7 +156,7 @@ fun DailySmartApp() {
         }.onFailure { info = "Could not import workbook: ${it.localizedMessage}" }
     }
 
-    MaterialTheme(colorScheme = darkColorScheme(background = Navy, surface = Panel, primary = Accent, onBackground = White, onSurface = White)) {
+    MaterialTheme(colorScheme = lightColorScheme(background = Navy, surface = Panel, primary = Accent, secondary = Lavender, onBackground = White, onSurface = White)) {
       CompositionLocalProvider(LocalLayoutDirection provides if (language == "ar") LayoutDirection.Rtl else LayoutDirection.Ltr) {
         pendingRestore?.let { snapshot ->
             AlertDialog(
@@ -185,7 +185,7 @@ fun DailySmartApp() {
                 }
             }
         }) { pad ->
-            Column(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Navy, Color(0xFF101B31), Navy))).padding(pad).padding(horizontal = 18.dp).then(if (tab == "Assistant" || tab == "Excel" || tab == "Settings") Modifier.verticalScroll(rememberScrollState()) else Modifier)) {
+            Column(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Navy, Color(0xFFEAF0FF), Navy))).padding(pad).padding(horizontal = 18.dp).then(if (tab == "Assistant" || tab == "Excel" || tab == "Settings") Modifier.verticalScroll(rememberScrollState()) else Modifier)) {
                 Spacer(Modifier.height(14.dp))
                 Box(
                     Modifier.fillMaxWidth().clip(RoundedCornerShape(26.dp))
@@ -196,7 +196,7 @@ fun DailySmartApp() {
                         Column(Modifier.weight(1f)) {
                             Text(uiText(language, "DAILYSMART  •  YOUR PERSONAL SPACE", "DAILYSMART  •  VOTRE ESPACE", "DAILYSMART  •  مساحتك الخاصة"), color = Color(0xFFB9F5E5), fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
                             Spacer(Modifier.height(6.dp))
-                            Text(uiText(language, "Your day, under control.", "Votre journée, bien organisée.", "نهارك منظم وتحت السيطرة."), color = White, fontSize = 21.sp, fontWeight = FontWeight.ExtraBold)
+                            Text(uiText(language, "Your day, under control.", "Votre journée, bien organisée.", "نهارك منظم وتحت السيطرة."), color = Color.White, fontSize = 21.sp, fontWeight = FontWeight.ExtraBold)
                             Spacer(Modifier.height(5.dp))
                             Text(SimpleDateFormat("EEEE, d MMMM", Locale.forLanguageTag(language)).format(Date()), color = Color(0xFFD0D9EC), fontSize = 12.sp)
                         }
