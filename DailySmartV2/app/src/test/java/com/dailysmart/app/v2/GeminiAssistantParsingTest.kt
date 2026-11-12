@@ -1,6 +1,7 @@
 package com.dailysmart.app.v2
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -50,6 +51,14 @@ class GeminiAssistantParsingTest {
             """{"reply":"Here is your report.","action":"finance_report","title":"","amount":0,"description":""}"""
         )
         assertTrue(report.action is AssistantAction.FinanceReport)
+    }
+
+    @Test
+    fun detectsForeignCurrencyWithoutTreatingDirhamsAsForeign() {
+        assertTrue(GeminiAssistant.hasNonMadCurrency("I spent 20 euros"))
+        assertTrue(GeminiAssistant.hasNonMadCurrency("paid $15"))
+        assertFalse(GeminiAssistant.hasNonMadCurrency("صرف 45 DH"))
+        assertFalse(GeminiAssistant.hasNonMadCurrency("spent 45 MAD"))
     }
 
     @Test

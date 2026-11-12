@@ -92,8 +92,8 @@ object GeminiAssistant {
         return interpretation
     }
 
-    private fun hasNonMadCurrency(value: String): Boolean =
-        Regex("""(?i)(?:\\b(?:usd|eur|euro|euros|dollar|dollars|gbp|pound|pounds)\\b|[$€£])""")
+    internal fun hasNonMadCurrency(value: String): Boolean =
+        Regex("""(?i)(?:\b(?:usd|eur|euro|euros|dollar|dollars|gbp|pound|pounds)\b|[$€£])""")
             .containsMatchIn(value)
 
     internal fun parseInterpretation(raw: String): AssistantInterpretation {

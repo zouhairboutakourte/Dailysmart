@@ -11,7 +11,7 @@ Independent Android application built with Kotlin and Jetpack Compose.
 - Empty-state guidance and improved list scrolling
 - CSV parser supports quoted commas, escaped quotes and multiline descriptions; CSV, offline assistant commands and SQLite migration/reset have automated unit tests run before APK packaging
 - Offline assistant commands in English, French, Arabic and Darija for common tasks and finance actions
-- Gemini conversational assistant client through Firebase AI Logic; uses Google's proxy and Firebase App Check rather than embedding a Gemini API key
+- Gemini assistant through Firebase AI Logic; can propose one task, expense, income or finance report from natural language, with explicit confirmation before adding records; uses Firebase App Check and no embedded Gemini API key
 - Finance ledger: income, expenses and MAD balance
 - Task list: add, complete and delete
 - Habits: add, daily check-off, reset checkmarks and delete
@@ -28,11 +28,11 @@ Independent Android application built with Kotlin and Jetpack Compose.
 4. For debug testing, launch the app and register the App Check debug token shown in Android logs under **Firebase Console → App Check → Apps → Manage debug tokens**. Keep AI Logic App Check enforcement enabled.
 5. For Play Store builds, register Play Integrity for App Check and use the Play signing certificate fingerprints.
 
-The app build remains possible without `google-services.json`, but Gemini stays disabled until Firebase configuration is added. The assistant currently sends only the typed prompt to Gemini; it does not upload the user's finance ledger, tasks or habits. Gemini replies conversationally; local deterministic commands continue to perform the supported task/finance actions.
+The app build remains possible without `google-services.json`, but Gemini stays disabled until Firebase configuration is added. The assistant sends only the typed prompt to Gemini; it never uploads the user's finance ledger, tasks or habits. Gemini can propose one new task, one income/expense record, or a finance report. The app validates the proposed action and requires the user to confirm before adding a task or transaction; finance totals are calculated locally.
 
 ## Not yet implemented
 - Real-device validation of backup/restore, upgrade from an older installed APK and performance is still required
-- Gemini-driven structured tool execution (the current Gemini connection is conversational; data-changing actions remain local deterministic commands)
+- Multi-step Gemini workflows, editing/deleting records through Gemini, reminders and habit actions are not implemented; current AI proposals are limited to one new task, one income/expense record, or a local finance report
 - Editing arbitrary Excel workbooks, formulas and charts; XLSX support currently focuses on DailySmart finance transaction sheets
 - Full Arabic, Darija, French and English interface localization
 - Calendar, reminders and goals
