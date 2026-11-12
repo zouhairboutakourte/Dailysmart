@@ -35,6 +35,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.io.InputStream
+import kotlinx.coroutines.launch
 
 private val Navy = Color(0xFFF4F6FC)
 private val Panel = Color(0xFFFFFFFF)
@@ -60,6 +61,9 @@ data class HabitItem(val title: String, val completedToday: Boolean = false)
 @Composable
 fun DailySmartApp() {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val geminiConfigured = remember { GeminiAssistant.initialize(context) }
+    var geminiLoading by remember { mutableStateOf(false) }
     val prefs = remember { context.getSharedPreferences("dailysmart_v2", Context.MODE_PRIVATE) }
     val database = remember {
         LocalDatabase(context).also { db ->
@@ -219,7 +223,7 @@ fun DailySmartApp() {
                             Column(Modifier.padding(16.dp)) {
                                 Row(verticalAlignment = Alignment.CenterVertically) { Icon(Icons.Default.AutoAwesome, null, tint = Accent); Spacer(Modifier.width(8.dp)); Text(uiText(language, "DailySmart Assistant", "Assistant DailySmart", "مساعد DailySmart"), fontWeight = FontWeight.Bold, fontSize = 18.sp) }
                                 Spacer(Modifier.height(12.dp))
-                                Text(uiText(language, "Tell me what you want to do. I can execute quick actions locally; secure online AI will be connected through a backend, never an API key inside the app.", "Décrivez ce que vous voulez faire. Les actions rapides fonctionnent localement ; l’IA en ligne sera connectée via un serveur sécurisé.", "اكتب ما تريد فعله. أستطيع تنفيذ أوامر سريعة محلياً، وسيتم ربط الذكاء الاصطناعي عبر خادم آمن لاحقاً."), color = Muted, fontSize = 13.sp)
+                                Text(if (geminiConfigured) uiText(language, "Gemini AI is connected through Firebase. Quick finance and task commands still run locally.", "Gemini AI est connecté via Firebase. Les commandes rapides restent locales.", "تم إعداد Gemini عبر Firebase. الأوامر السريعة للمهام والمالية ما زالت تُنفذ محلياً.") else uiText(language, "Gemini setup is prepared. Connect the Firebase project to activate online AI.", "La connexion Gemini est préparée. Connectez le projet Firebase pour activer l’IA.", "ربط Gemini جاهز برمجياً. خاصنا نربطو مشروع Firebase باش يتفعّل الذكاء الاصطناعي."), color = Muted, fontSize = 13.sp)
                                 Spacer(Modifier.height(12.dp))
                                 Text(info, color = Accent, fontSize = 13.sp)
                             }
@@ -234,22 +238,49 @@ fun DailySmartApp() {
                                     tasks = tasks + TaskItem(action.title)
                                     saveTasks()
                                     info = "${uiText(language, "Task added", "Tâche ajoutée", "تمت إضافة المهمة")}: ${action.title}"
+                                    command = ""
                                 }
                                 is AssistantAction.AddMoney -> {
                                     money = money + MoneyItem(action.description, action.amount, action.income)
                                     saveMoney()
                                     info = "${if (action.income) uiText(language, "Income", "Revenu", "مدخول") else uiText(language, "Expense", "Dépense", "مصروف")} ${uiText(language, "recorded", "enregistré", "تسجل")}: ${action.amount} MAD"
+                                    command = ""
                                 }
                                 AssistantAction.FinanceReport -> {
                                     val totalIncome = money.filter { it.income }.sumOf { it.amount }
                                     val totalExpense = money.filterNot { it.income }.sumOf { it.amount }
                                     val balance = totalIncome - totalExpense
                                     info = "${uiText(language, "Finance report", "Rapport financier", "التقرير المالي")} · ${uiText(language, "Income", "Revenu", "المداخيل")}: ${"%.2f".format(totalIncome)} MAD · ${uiText(language, "Expenses", "Dépenses", "المصاريف")}: ${"%.2f".format(totalExpense)} MAD · ${uiText(language, "Balance", "Solde", "الرصيد")}: ${"%.2f".format(balance)} MAD"
+                                    command = ""
                                 }
-                                AssistantAction.Help -> info = uiText(language, AssistantEngine.helpText(), "Exemples : ajouter tâche appeler la banque · dépense 50 café · revenu 8000 salaire · bilan. Assistant local hors ligne.", "أمثلة: زيد مهمة الاتصال بالبنك · سجل مصروف 50 قهوة · سجل دخل 8000 راتب · تقرير مالي. المساعد يعمل محلياً دون إنترنت.")
+                                AssistantAction.Help -> {
+                                    if (!geminiConfigured) {
+                                        info = uiText(language, "Gemini is not active yet. Firebase project configuration is required.", "Gemini n’est pas encore actif. La configuration Firebase est nécessaire.", "Gemini مازال ما تفعلش. خاص إعداد مشروع Firebase.")
+                                    } else {
+                                        geminiLoading = true
+                                        scope.launch {
+                                            try {
+                                                info = GeminiAssistant.ask(c, language)
+                                            } catch (error: Exception) {
+                                                info = uiText(language, "Gemini request failed: ", "Échec de la requête Gemini : ", "وقع مشكل فالاتصال بـ Gemini: ") + (error.localizedMessage ?: "Unknown error")
+                                            } finally {
+                                                geminiLoading = false
+                                            }
+                                    }
+                                    command = ""
+                                }
                             }
-                            command = ""
-                        }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(14.dp)) { Icon(Icons.Default.Send, null); Spacer(Modifier.width(8.dp)); Text(uiText(language, "Run command", "Exécuter", "تنفيذ الأمر")) }
+                        }, enabled = !geminiLoading, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(14.dp)) {
+                            if (geminiLoading) {
+                                CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                                Spacer(Modifier.width(8.dp))
+                                Text(uiText(language, "Gemini is thinking…", "Gemini réfléchit…", "Gemini كيفكر…"))
+                            } else {
+                                Icon(Icons.Default.Send, null)
+                                Spacer(Modifier.width(8.dp))
+                                Text(uiText(language, "Ask Gemini / Run command", "Demander à Gemini / Exécuter", "سول Gemini / نفّذ الأمر"))
+                            }
+                        }
                         Spacer(Modifier.height(14.dp))
                         Text(uiText(language, "QUICK OVERVIEW", "APERÇU RAPIDE", "نظرة سريعة"), color = Muted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -355,7 +386,7 @@ fun DailySmartApp() {
                                 Text(uiText(language, "Your tasks, habits and finance records are stored locally on this device.", "Vos tâches, habitudes et finances sont stockées sur cet appareil.", "المهام والعادات والسجلات المالية محفوظة محلياً على هذا الهاتف."), color = White)
                                 Text(uiText(language, "Privacy", "Confidentialité", "الخصوصية"), color = Muted, fontSize = 12.sp)
                                 Text(uiText(language, "No ads. No account required. No AI API key is embedded in this APK.", "Sans publicité ni compte. Aucune clé API IA dans l’application.", "بدون إعلانات أو حساب، ولا توجد مفاتيح ذكاء اصطناعي داخل التطبيق."), color = White)
-                                Text(uiText(language, "Online AI is not connected yet. XLSX finance import/export is available.", "L’IA en ligne n’est pas encore connectée. L’import/export Excel est disponible.", "الذكاء الاصطناعي المتصل بالإنترنت غير مفعّل بعد. استيراد وتصدير Excel متاح."), color = Accent, fontSize = 12.sp)
+                                Text(if (geminiConfigured) uiText(language, "Gemini AI client configured via Firebase AI Logic. App Check protects requests.", "Client Gemini configuré via Firebase AI Logic. App Check protège les requêtes.", "تم إعداد Gemini عبر Firebase AI Logic، وApp Check يحمي الطلبات.") else uiText(language, "Gemini client is ready in code; Firebase project setup is still required.", "Le client Gemini est prêt dans le code ; la configuration Firebase reste nécessaire.", "كود Gemini واجد، وباقي خاص إعداد مشروع Firebase."), color = Accent, fontSize = 12.sp)
                                 Divider(color = Muted.copy(alpha = 0.25f))
                                 Text(uiText(language, "Backup & restore", "Sauvegarde et restauration", "النسخ الاحتياطي والاسترجاع"), color = Muted, fontSize = 12.sp)
                                 Text(uiText(language, "Create a portable copy of tasks, finance records and habits. Restoring replaces current data only after confirmation.", "Créez une copie de vos tâches, finances et habitudes. La restauration remplace les données après confirmation.", "أنشئ نسخة من مهامك ومصاريفك وعاداتك. الاسترجاع يعوض البيانات الحالية بعد التأكيد."), color = White, fontSize = 12.sp)
