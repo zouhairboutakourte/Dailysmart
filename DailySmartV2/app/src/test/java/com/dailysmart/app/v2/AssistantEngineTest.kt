@@ -16,6 +16,34 @@ class AssistantEngineTest {
     }
 
     @Test
+    fun parsesArabiziExpenseWithAttachedCurrencyAndPreposition() {
+        val action = AssistantEngine.parse("sraft 50dh f l9hwa")
+        assertTrue(action is AssistantAction.AddMoney)
+        val money = action as AssistantAction.AddMoney
+        assertEquals(50.0, money.amount, 0.001)
+        assertEquals("l9hwa", money.description)
+        assertEquals(false, money.income)
+    }
+
+    @Test
+    fun parsesAlternativeArabiziPaymentPhrase() {
+        val action = AssistantEngine.parse("ana khlest 120 dh internet")
+        assertTrue(action is AssistantAction.AddMoney)
+        val money = action as AssistantAction.AddMoney
+        assertEquals(120.0, money.amount, 0.001)
+        assertEquals("internet", money.description)
+        assertEquals(false, money.income)
+    }
+
+    @Test
+    fun parsesArabiziTaskAndReportPhrases() {
+        val task = AssistantEngine.parse("zid lia mohimma n3ayet l'assurance")
+        assertTrue(task is AssistantAction.AddTask)
+        assertEquals("n3ayet l'assurance", (task as AssistantAction.AddTask).title)
+        assertTrue(AssistantEngine.parse("fin mchaw flosi") is AssistantAction.FinanceReport)
+    }
+
+    @Test
     fun parsesArabicIndicDigitsForIncome() {
         val action = AssistantEngine.parse("سجل دخل ١٢٠٠ راتب")
         assertTrue(action is AssistantAction.AddMoney)

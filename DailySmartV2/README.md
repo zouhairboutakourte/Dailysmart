@@ -2,7 +2,7 @@
 
 Independent Android application built with Kotlin and Jetpack Compose.
 
-## Implemented in version 2.11.0
+## Implemented in version 2.12.0
 - Separate package: `com.dailysmart.app.v2`
 - Premium light interface with a soft blue-white background, white cards, indigo-to-violet gradient hero, mint highlights, refreshed navigation and a redesigned branded launcher icon
 - Branded launcher icon
@@ -10,8 +10,8 @@ Independent Android application built with Kotlin and Jetpack Compose.
 - Localized core navigation, task, finance, habit, backup and spreadsheet screens
 - Empty-state guidance and improved list scrolling
 - CSV parser supports quoted commas, escaped quotes and multiline descriptions; CSV, offline assistant commands and SQLite migration/reset have automated unit tests run before APK packaging
-- Offline assistant commands in English, French, Arabic and Darija for common tasks and finance actions
-- Gemini assistant through Firebase AI Logic; can propose one task, expense, income, one-time reminder or finance report from natural language, with explicit confirmation before adding records; uses Firebase App Check and no embedded Gemini API key
+- Offline assistant commands in English, French, Arabic and Darija, including Arabizi / Darija written with Latin letters and numerals (3/7/9), for common tasks and finance actions
+- Gemini assistant through Firebase AI Logic; understands Arabic-script Darija and Latin-script Arabizi, and can propose one task, expense, income, one-time reminder or finance report from natural language, with explicit confirmation before adding records; uses Firebase App Check and no embedded Gemini API key
 - Finance ledger: income, expenses and MAD balance
 - Finance insights: week/month income and expense totals, month-to-date savings/overspending signal, ranked category breakdown with visual bars, transaction dates, persistent monthly spending budget and savings target with progress/over-budget feedback
 - Task list: add, complete and delete

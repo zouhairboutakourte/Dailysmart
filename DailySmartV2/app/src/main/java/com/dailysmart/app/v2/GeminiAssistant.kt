@@ -67,6 +67,13 @@ object GeminiAssistant {
             Return ONLY one valid JSON object, without Markdown or code fences, using this schema:
             {"reply":"short user-facing message","action":"chat|add_task|add_expense|add_income|finance_report|add_reminder","title":"","amount":0,"description":"","trigger_at":""}
 
+            Language understanding:
+            - Understand Moroccan Darija whether written in Arabic script or Latin transliteration (Arabizi), including mixed Arabic/French/English sentences.
+            - Recognize common Arabizi numerals: 3 = ع, 7 = ح, 9 = ق, 5/kh = خ,  gh = غ. These may appear inside words, not as amounts.
+            - Examples: "sraft 50dh f l9hwa" = expense 50 MAD for coffee; "khlest 120 dh l internet" = expense; "dkhelt 8000 salaire" = income; "zid lia mohimma n3ayet l'assurance" = create a task; "ch7al sraft?" = local finance report.
+            - Preserve the user's original description naturally; do not mistake Arabizi digits embedded in words (such as l9hwa or n3ayet) for money amounts.
+            - If intent or amount is unclear, ask a brief clarification instead of guessing.
+            
             Safety and accuracy rules:
             - You may propose exactly one new task, one expense, one income record, one one-time reminder, or a finance report.
             - Never claim that anything was saved or changed. The app will ask the user to confirm before adding a task, money record or reminder.

@@ -22,7 +22,9 @@ object AssistantEngine {
         val taskPrefixes = listOf(
             "add task", "create task", "new task", "ajouter tâche", "ajoute tâche",
             "ajouter une tâche", "ajoute une tâche", "زيد مهمة", "زيد ليا مهمة",
-            "أضف مهمة", "مهمة جديدة", "zid mohimma", "zid task", "sajel mohimma", "sajel liya mohimma", "dir mohimma", "3tini mohimma"
+            "أضف مهمة", "مهمة جديدة", "zid mohimma", "zid lia mohimma", "zid liya mohimma",
+            "sajel mohimma", "sajel lia mohimma", "sajel liya mohimma", "dir mohimma",
+            "bghit nzid mohimma", "bghit ndir task", "3tini mohimma", "zid task"
         )
         taskPrefixes.firstOrNull { lower.startsWith(it) }?.let { prefix ->
             val title = input.drop(prefix.length).trim().trimStart(':', '-', ' ')
@@ -38,11 +40,14 @@ object AssistantEngine {
             "dépense" to false, "depense" to false,
             "income" to true, "salary" to true, "دخل" to true, "سجل دخل" to true,
             "revenu" to true, "recette" to true,
-            "masrouf" to false, "sajel masrouf" to false,
-            "sraft" to false, "sreft" to false, "khrjt" to false,
-            "khrej" to false, "chrit" to false, "khlest" to false,
+            "masrouf" to false, "sajel masrouf" to false, "sajel lia masrouf" to false,
+            "ana sraft" to false, "ana sreft" to false, "lyom sraft" to false,
+            "sraft lia" to false, "sraft" to false, "sreft" to false,
+            "ana khrejt" to false, "khrjt" to false, "khrejt" to false,
+            "khrej" to false, "chrit" to false, "ana khlest" to false, "khlest" to false,
             "sarf" to false, "dkhl" to true, "dakhl" to true,
-            "sajel dakhl" to true, "dkhol" to true,
+            "sajel dakhl" to true, "sajel lia dakhl" to true, "dkhol" to true,
+            "ana dkhelt" to true, "dkhelt" to true, "dkhalt" to true,
             "khdemt" to true, "khedmt" to true,
             "j'ai reçu" to true, "j'ai recu" to true,
             "gagné" to true, "gagne" to true,
@@ -52,7 +57,7 @@ object AssistantEngine {
         for ((prefix, isIncome) in moneyPrefixes.sortedByDescending { it.first.length }) {
             if (lower.startsWith(prefix)) {
                 val rest = normalizedInput.drop(prefix.length).trim().trimStart(':', '-', ' ')
-                val amountMatch = Regex("""(?:^|\s)(\d+(?:[.,]\d{1,2})?)(?=\s|$)""").find(rest)
+                val amountMatch = Regex("""(?:^|\s)(\d+(?:[.,]\d{1,2})?)(?=\s|(?i:dh|dhs|mad|€)|$)""").find(rest)
                     ?: return AssistantAction.Help
                 val amount = amountMatch.groupValues[1].replace(',', '.').toDoubleOrNull()
                     ?: return AssistantAction.Help
@@ -69,7 +74,7 @@ object AssistantEngine {
             }
         }
 
-        if (listOf("report", "finance report", "bilan", "rapport", "تقرير", "تقرير مالي", "الحساب", "7sab", "7ssab", "7sab dyali", "ch7al sraft", "ch7al khrejt", "شحال صرفت", "شحال خرجت").any { lower == it }) {
+        if (listOf("report", "finance report", "bilan", "rapport", "تقرير", "تقرير مالي", "الحساب", "7sab", "7ssab", "7sab dyali", "ch7al sraft", "ch7al sreft", "ch7al khrejt", "ch7al khssert", "fin mchaw flosi", "ch7al ba9i", "شحال صرفت", "شحال خرجت", "فين مشاو فلوسي").any { lower == it }) {
             return AssistantAction.FinanceReport
         }
         return AssistantAction.Help
@@ -90,6 +95,6 @@ object AssistantEngine {
     }
 
     fun helpText(): String =
-        "Try: add task call the bank · spent 45 DH on coffee · sajel masrouf 50 qhwa · sajel dakhl 8000 salaire · ch7al sraft. " +
+        "Try: add task call the bank · spent 45 DH on coffee · sajel masrouf 50 qhwa · sraft 50dh f l9hwa · khlest 120 dh internet · sajel dakhl 8000 salaire · ch7al sraft. " +
         "You can also use Arabic, French and Darija commands. Offline commands and local reminders work without internet; Gemini natural-language actions require Firebase setup and an internet connection, and proposed changes always need confirmation."
 }
