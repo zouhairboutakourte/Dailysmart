@@ -68,9 +68,8 @@ object AssistantEngine {
                 if (!amount.isFinite() || amount <= 0.0) return AssistantAction.Help
                 var description = rest.removeRange(amountMatch.range).trim()
                 description = description
-                    .split(Regex("\\s+"))
-                    .filterNot { it.lowercase() in setOf("dh", "dhs", "mad", "dirham", "dirhams") }
-                    .joinToString(" ")
+                    .replace(Regex("""(?i)(^|\\s)(dhs?|mad|dirhams?)(?=\\s|$)"""), " ")
+                    .replace(Regex("""\\s+"""), " ")
                     .replace(Regex("^(?i)(on|for|at|in|sur|pour|à|au|3la|f|l|في|على)\\s*"), "")
                     .trim(' ', ':', '-', '،', ',')
                 if (description.isBlank()) description = if (isIncome) "Income" else "Expense"
