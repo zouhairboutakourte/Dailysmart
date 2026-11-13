@@ -65,7 +65,7 @@ object AssistantEngine {
                 if (!amount.isFinite() || amount <= 0.0) return AssistantAction.Help
                 var description = rest.removeRange(amountMatch.range).trim()
                 description = description
-                    .replace(Regex("(?i)(?:^|\\s)(?:dh|dhs|mad|dirham|dirhams)(?=\\s|$)|€|درهم|دراهم"), " ")
+                    .replace(Regex("""(?i)\b(?:dh|dhs|mad|dirham|dirhams)\b|€|درهم|دراهم"""), " ")
                     .replace(Regex("\\s+"), " ")
                     .trim()
                     .replace(Regex("^(?i)(on|for|at|in|sur|pour|à|au|3la|f|l|في|على)\\s*"), "")
