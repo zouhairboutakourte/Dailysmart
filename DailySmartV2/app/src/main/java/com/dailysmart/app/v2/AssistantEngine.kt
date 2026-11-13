@@ -58,19 +58,16 @@ object AssistantEngine {
         for ((prefix, isIncome) in moneyPrefixes.sortedByDescending { it.first.length }) {
             if (lower.startsWith(prefix)) {
                 val rest = normalizedInput.drop(prefix.length).trim().trimStart(':', '-', ' ')
-                val amountMatch = Regex("""(?:^|\s)(\d+(?:[.,]\d{1,2})?)(?=\s|(?i:dh|dhs|mad|€)|$)""").find(rest)
+                    .replace(Regex("""(?i)(?<=\\d)(?:dhs|dh|mad)\\b|\\b(?:dhs|dh|mad|dirham|dirhams)\\b|€|درهم|دراهم"""), " ")
+                    .replace(Regex("\\s+"), " ")
+                    .trim()
+                val amountMatch = Regex("""(?:^|\\s)(\\d+(?:[.,]\\d{1,2})?)(?=\\s|$)""").find(rest)
                     ?: return AssistantAction.Help
                 val amount = amountMatch.groupValues[1].replace(',', '.').toDoubleOrNull()
                     ?: return AssistantAction.Help
                 if (!amount.isFinite() || amount <= 0.0) return AssistantAction.Help
                 var description = rest.removeRange(amountMatch.range).trim()
                 description = description
-                    .replace("€", " ")
-                    .replace("درهم", " ")
-                    .replace("دراهم", " ")
-                    .split(Regex("\\s+"))
-                    .filterNot { it.lowercase() in setOf("dh", "dhs", "mad", "dirham", "dirhams") }
-                    .joinToString(" ")
                     .trim()
                     .replace(Regex("^(?i)(on|for|at|in|sur|pour|à|au|3la|f|l|في|على)\\s*"), "")
                     .trim(' ', ':', '-', '،', ',')
