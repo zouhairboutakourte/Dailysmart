@@ -58,10 +58,10 @@ object AssistantEngine {
         for ((prefix, isIncome) in moneyPrefixes.sortedByDescending { it.first.length }) {
             if (lower.startsWith(prefix)) {
                 val rest = normalizedInput.drop(prefix.length).trim().trimStart(':', '-', ' ')
-                    .replace(Regex("""(?i)(?<=\\d)(?:dhs|dh|mad)\\b|\\b(?:dhs|dh|mad|dirham|dirhams)\\b|€|درهم|دراهم"""), " ")
+                    .replace(Regex("""(?i)(?<=\d)(?:dhs|dh|mad)\b|\b(?:dhs|dh|mad|dirham|dirhams)\b|€|درهم|دراهم"""), " ")
                     .replace(Regex("\\s+"), " ")
                     .trim()
-                val amountMatch = Regex("""(?:^|\\s)(\\d+(?:[.,]\\d{1,2})?)(?=\\s|$)""").find(rest)
+                val amountMatch = Regex("""(?:^|\s)(\d+(?:[.,]\d{1,2})?)(?=\s|$)""").find(rest)
                     ?: return AssistantAction.Help
                 val amount = amountMatch.groupValues[1].replace(',', '.').toDoubleOrNull()
                     ?: return AssistantAction.Help
