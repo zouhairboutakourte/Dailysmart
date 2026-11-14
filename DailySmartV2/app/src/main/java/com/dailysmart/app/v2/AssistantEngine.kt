@@ -67,9 +67,11 @@ object AssistantEngine {
                     ?: return AssistantAction.Help
                 if (!amount.isFinite() || amount <= 0.0) return AssistantAction.Help
                 var description = rest.removeRange(amountMatch.range).trim()
+                val currencyTokens = setOf("dh", "dhs", "mad", "dirham", "dirhams", "€", "درهم", "دراهم")
                 description = description
-                    .replace(Regex("""(?i)\b(?:dhs?|mad|dirhams?)\b"""), " ")
-                    .replace(Regex("""\s+"""), " ")
+                    .split(Regex("""\s+"""))
+                    .filterNot { token -> token.trim(' ', ':', '-', '،', ',').lowercase() in currencyTokens }
+                    .joinToString(" ")
                     .replace(Regex("""(?i)^(on|for|at|in|sur|pour|à|au|3la|f|l|في|على)\s*"""), "")
                     .trim(' ', ':', '-', '،', ',')
                 if (description.isBlank()) description = if (isIncome) "Income" else "Expense"
