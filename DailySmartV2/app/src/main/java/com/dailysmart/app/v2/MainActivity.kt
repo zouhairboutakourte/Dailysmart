@@ -157,16 +157,16 @@ fun DailySmartApp() {
             val bytes = BackupCodec.encode(tasks, money, habits, savedMonthlyBudget, savedMonthlySavingsGoal)
             context.contentResolver.openOutputStream(uri)?.use { it.write(bytes) }
                 ?: throw IllegalStateException("Could not create backup file.")
-            info = "Backup created successfully."
-        }.onFailure { info = "Backup failed: ${it.localizedMessage}" }
+            info = uiText(language, "Backup created successfully.", "Sauvegarde créée avec succès.", "تم إنشاء النسخة الاحتياطية بنجاح.")
+        }.onFailure { info = uiText(language, "Backup failed. Please try again.", "Échec de la sauvegarde. Réessayez.", "فشل إنشاء النسخة الاحتياطية. حاول مرة أخرى.") }
     }
     val restoreLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         if (uri != null) runCatching {
             val bytes = context.contentResolver.openInputStream(uri)?.use { readBackupBounded(it) }
                 ?: throw IllegalStateException("Could not open selected file.")
             pendingRestore = BackupCodec.decode(bytes)
-            info = "Backup checked. Confirm restore to replace current records."
-        }.onFailure { info = "Restore failed: ${it.localizedMessage}" }
+            info = uiText(language, "Backup checked. Confirm restore to replace current records.", "Sauvegarde vérifiée. Confirmez pour remplacer les données actuelles.", "تم التحقق من النسخة. أكد الاسترجاع لتعويض البيانات الحالية.")
+        }.onFailure { info = uiText(language, "Restore failed. The file may be invalid.", "Échec de la restauration. Le fichier est peut-être invalide.", "فشل الاسترجاع. ربما الملف غير صالح.") }
     }
 
     fun saveTasks() { database.replaceTasks(tasks) }
@@ -191,8 +191,8 @@ fun DailySmartApp() {
                 out.appendLine("type,description,amount,currency,date")
                 money.forEach { out.appendLine("${if (it.income) "income" else "expense"},\"${it.title.replace("\"", "\"\"")}\",${it.amount},MAD,${FinanceAnalytics.dateString(it.createdAt)}") }
             }
-            info = "CSV export created."
-        }.onFailure { info = "Export failed: ${it.localizedMessage}" }
+            info = uiText(language, "CSV export created.", "Fichier CSV exporté.", "تم تصدير ملف CSV.")
+        }.onFailure { info = uiText(language, "Export failed. Please try again.", "Échec de l’exportation. Réessayez.", "فشل التصدير. حاول مرة أخرى.") }
     }
     val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         if (uri != null) runCatching {
@@ -212,15 +212,15 @@ fun DailySmartApp() {
             }
             money = money + imported
             saveMoney()
-            info = "${imported.size} CSV rows imported."
-        }.onFailure { info = "Could not read CSV file." }
+            info = uiText(language, "${imported.size} CSV rows imported.", "${imported.size} lignes CSV importées.", "تم استيراد ${imported.size} سطر من CSV.")
+        }.onFailure { info = uiText(language, "Could not read the CSV file. Check its format and size.", "Impossible de lire le CSV. Vérifiez son format et sa taille.", "تعذر قراءة ملف CSV. تحقق من الصيغة والحجم.") }
     }
 
     val xlsxExportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")) { uri ->
         if (uri != null) runCatching {
             context.contentResolver.openOutputStream(uri)?.use { it.write(ExcelWorkbook.exportFinance(money)) }
-            info = "Excel workbook exported successfully."
-        }.onFailure { info = "XLSX export failed: ${it.localizedMessage}" }
+            info = uiText(language, "Excel workbook exported successfully.", "Classeur Excel exporté avec succès.", "تم تصدير ملف Excel بنجاح.")
+        }.onFailure { info = uiText(language, "Excel export failed. Please try again.", "Échec de l’export Excel. Réessayez.", "فشل تصدير Excel. حاول مرة أخرى.") }
     }
     val xlsxImportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         if (uri != null) runCatching {
@@ -228,8 +228,8 @@ fun DailySmartApp() {
             val imported = ExcelWorkbook.importFinance(bytes)
             money = money + imported
             saveMoney()
-            info = "${imported.size} Excel rows imported."
-        }.onFailure { info = "Could not import workbook: ${it.localizedMessage}" }
+            info = uiText(language, "${imported.size} Excel rows imported.", "${imported.size} lignes Excel importées.", "تم استيراد ${imported.size} سطر من Excel.")
+        }.onFailure { info = uiText(language, "Could not import this workbook. Check that it is a DailySmart finance file.", "Impossible d’importer ce classeur. Vérifiez qu’il s’agit d’un fichier financier DailySmart.", "تعذر استيراد الملف. تأكد أنه ملف مالي بصيغة DailySmart.") }
     }
 
     MaterialTheme(colorScheme = lightColorScheme(background = Navy, surface = Panel, primary = Accent, secondary = Lavender, onBackground = White, onSurface = White)) {
@@ -720,7 +720,7 @@ fun DailySmartApp() {
                                 }
                                 Divider(color = Muted.copy(alpha = 0.25f))
                                 Text("DailySmart V2", color = White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                                Text(uiText(language, "Version 2.10.0 · Android app", "Version 2.10.0 · Application Android", "الإصدار 2.10.0 · تطبيق أندرويد"), color = Muted, fontSize = 12.sp)
+                                Text(uiText(language, "Version 2.12.0 · Android app", "Version 2.12.0 · Application Android", "الإصدار 2.12.0 · تطبيق أندرويد"), color = Muted, fontSize = 12.sp)
                                 Divider(color = Muted.copy(alpha = 0.25f))
                                 Text(uiText(language, "Currency", "Devise", "العملة"), color = Muted, fontSize = 12.sp)
                                 Text(uiText(language, "Moroccan dirham (MAD)", "Dirham marocain (MAD)", "الدرهم المغربي (MAD)"), color = White)
