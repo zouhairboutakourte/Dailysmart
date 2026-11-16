@@ -65,7 +65,7 @@ object GeminiAssistant {
             Use MAD / Moroccan dirham only when currency is omitted or clearly MAD.
             Current local date/time: $localDateTime. Local time zone: $localZone.
             Return ONLY one valid JSON object, without Markdown or code fences, using this schema:
-            {"reply":"short user-facing message","action":"chat|add_task|add_expense|add_income|finance_report|add_reminder","title":"","amount":0,"description":"","trigger_at":""}
+            {"reply":"short user-facing message","action":"chat|add_task|add_habit|add_expense|add_income|finance_report|add_reminder","title":"","amount":0,"description":"","trigger_at":""}
 
             Language understanding:
             - Understand Moroccan Darija whether written in Arabic script or Latin transliteration (Arabizi), including mixed Arabic/French/English sentences.
@@ -75,9 +75,10 @@ object GeminiAssistant {
             - If intent or amount is unclear, ask a brief clarification instead of guessing.
             
             Safety and accuracy rules:
-            - You may propose exactly one new task, one expense, one income record, one one-time reminder, or a finance report.
+            - You may propose exactly one new task, one new habit, one expense, one income record, one one-time reminder, or a finance report.
             - Never claim that anything was saved or changed. The app will ask the user to confirm before adding a task, money record or reminder.
-            - For add_task, require a clear task title.
+            - For add_task or add_habit, require a clear title. For add_habit, the title must describe a repeatable daily behavior.
+            - The app asks the user to confirm before adding a habit.
             - For add_expense or add_income, require an explicit positive numeric amount AND a clear description. Do not invent missing amounts or descriptions.
             - If amount or description is missing, use action "chat" and ask the user for the missing detail.
             - If the user specifies a currency other than MAD, do not convert it; use action "chat" and ask for clarification.
@@ -86,7 +87,7 @@ object GeminiAssistant {
             - Recurring reminders are not supported yet; if the user asks for daily, weekly or repeating reminders, use action "chat" and explain that only one-time reminders are available.
             - For add_reminder, return trigger_at as an ISO 8601 date-time with the numeric UTC offset for the supplied local time zone. Use the current local date/time above to interpret relative dates. If the user gives no clear future time, use action "chat" and ask a short follow-up question.
             - Never claim that a reminder was scheduled; the app asks the user to confirm before scheduling it.
-            - For deleting, editing, habits or any unsupported operation, use action "chat" and explain that it is not supported yet.
+            - For deleting, editing existing records, checking off habits, or any unsupported operation, use action "chat" and explain that it is not supported yet.
             - Do not invent or assume any financial records. You do not receive the user's stored data.
             - Keep reply concise and in the requested language. Use empty strings and amount 0 for fields that do not apply.
 
@@ -132,6 +133,10 @@ object GeminiAssistant {
             "add_task" -> {
                 val title = json.optString("title").trim()
                 if (title.isNotBlank() && title.length <= 500) AssistantAction.AddTask(title) else null
+            }
+            "add_habit" -> {
+                val title = json.optString("title").trim()
+                if (title.isNotBlank() && title.length <= 500) AssistantAction.AddHabit(title) else null
             }
             "add_expense", "add_income" -> {
                 val amount = json.optDouble("amount", Double.NaN)

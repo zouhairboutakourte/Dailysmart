@@ -43,6 +43,14 @@ class GeminiAssistantParsingTest {
     }
 
     @Test
+    fun parsesHabitProposal() {
+        val result = GeminiAssistant.parseInterpretation(
+            """{"reply":"I can add this daily habit. Please confirm.","action":"add_habit","title":"Drink 2L water","amount":0,"description":""}"""
+        )
+        assertEquals(AssistantAction.AddHabit("Drink 2L water"), result.action)
+    }
+
+    @Test
     fun parsesTaskAndFinanceReport() {
         val task = GeminiAssistant.parseInterpretation(
             """{"reply":"I can add this task.","action":"add_task","title":"Call the bank","amount":0,"description":""}"""

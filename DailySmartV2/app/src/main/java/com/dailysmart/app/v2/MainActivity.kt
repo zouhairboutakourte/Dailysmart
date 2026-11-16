@@ -239,12 +239,14 @@ fun DailySmartApp() {
             is AssistantAction.AddTask -> uiText(language, "Confirm new task", "Confirmer la tâche", "تأكيد المهمة الجديدة")
             is AssistantAction.AddMoney -> uiText(language, "Confirm finance record", "Confirmer l’opération", "تأكيد العملية المالية")
             is AssistantAction.AddReminder -> uiText(language, "Confirm reminder", "Confirmer le rappel", "تأكيد التذكير")
+            is AssistantAction.AddHabit -> uiText(language, "Confirm new habit", "Confirmer la nouvelle habitude", "تأكيد العادة الجديدة")
             else -> ""
         }
         val actionMessage = when (action) {
             is AssistantAction.AddTask -> "${uiText(language, "Add this task?", "Ajouter cette tâche ?", "واش نضيف هاد المهمة؟")}\n${action.title}"
             is AssistantAction.AddMoney -> "${uiText(language, if (action.income) "Record this income?" else "Record this expense?", if (action.income) "Enregistrer ce revenu ?" else "Enregistrer cette dépense ?", if (action.income) "واش نسجل هاد المدخول؟" else "واش نسجل هاد المصروف؟")}\n${action.amount} MAD · ${action.description}"
             is AssistantAction.AddReminder -> "${uiText(language, "Schedule this reminder?", "Programmer ce rappel ?", "واش نبرمج هاد التذكير؟")}\n${action.title}\n${SimpleDateFormat("EEE, dd MMM yyyy · HH:mm", Locale.forLanguageTag(language)).format(Date(action.triggerAt))}"
+            is AssistantAction.AddHabit -> "${uiText(language, "Add this daily habit?", "Ajouter cette habitude quotidienne ?", "واش نضيف هاد العادة اليومية؟")}\n${action.title}"
             else -> ""
         }
         AlertDialog(
@@ -263,6 +265,11 @@ fun DailySmartApp() {
                             money = money + MoneyItem(action.description, action.amount, action.income)
                             saveMoney()
                             info = "${uiText(language, if (action.income) "Income recorded" else "Expense recorded", if (action.income) "Revenu enregistré" else "Dépense enregistrée", if (action.income) "تسجل المدخول" else "تسجل المصروف")}: ${action.amount} MAD"
+                        }
+                        is AssistantAction.AddHabit -> {
+                            habits = habits + HabitItem(action.title)
+                            saveHabits()
+                            info = "${uiText(language, "Habit added", "Habitude ajoutée", "تمت إضافة العادة")}: ${action.title}"
                         }
                         is AssistantAction.AddReminder -> {
                             if (action.triggerAt > System.currentTimeMillis()) {
@@ -393,7 +400,7 @@ fun DailySmartApp() {
                         Button(onClick = {
                             val c = command.trim()
                             when (val action = AssistantEngine.parse(c)) {
-                                is AssistantAction.AddTask, is AssistantAction.AddMoney, is AssistantAction.AddReminder -> {
+                                is AssistantAction.AddTask, is AssistantAction.AddHabit, is AssistantAction.AddMoney, is AssistantAction.AddReminder -> {
                                     pendingAssistantAction = action
                                 }
                                 AssistantAction.FinanceReport -> {
@@ -410,7 +417,7 @@ fun DailySmartApp() {
                                                 val interpretation = GeminiAssistant.interpret(c, language)
                                                 info = interpretation.reply
                                                 when (val aiAction = interpretation.action) {
-                                                    is AssistantAction.AddTask, is AssistantAction.AddMoney, is AssistantAction.AddReminder -> pendingAssistantAction = aiAction
+                                                    is AssistantAction.AddTask, is AssistantAction.AddHabit, is AssistantAction.AddMoney, is AssistantAction.AddReminder -> pendingAssistantAction = aiAction
                                                     AssistantAction.FinanceReport -> showFinanceReport()
                                                     else -> Unit
                                                 }

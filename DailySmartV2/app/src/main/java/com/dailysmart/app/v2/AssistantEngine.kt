@@ -6,6 +6,7 @@ package com.dailysmart.app.v2
  */
 sealed class AssistantAction {
     data class AddTask(val title: String) : AssistantAction()
+    data class AddHabit(val title: String) : AssistantAction()
     data class AddMoney(val amount: Double, val description: String, val income: Boolean) : AssistantAction()
     data class AddReminder(val title: String, val triggerAt: Long) : AssistantAction()
     data object FinanceReport : AssistantAction()
@@ -18,6 +19,17 @@ object AssistantEngine {
         if (input.isBlank() || input.length > 1500) return AssistantAction.Help
         val normalizedInput = normalizeArabicDigits(input)
         val lower = normalizedInput.lowercase()
+
+        val habitPrefixes = listOf(
+            "add habit", "create habit", "new habit", "ajouter habitude", "ajouter une habitude",
+            "zid 3ada", "zid lia 3ada", "zid liya 3ada", "dir 3ada", "bghit nzid 3ada",
+            "زيد عادة", "زيد ليا عادة", "أضف عادة", "عادة جديدة"
+        )
+        habitPrefixes.firstOrNull { lower.startsWith(it) }?.let { prefix ->
+            val title = input.drop(prefix.length).trim().trimStart(':', '-', ' ')
+            if (title.isNotBlank() && title.length <= 500) return AssistantAction.AddHabit(title)
+            return AssistantAction.Help
+        }
 
         val taskPrefixes = listOf(
             "add task", "create task", "new task", "ajouter tâche", "ajoute tâche",

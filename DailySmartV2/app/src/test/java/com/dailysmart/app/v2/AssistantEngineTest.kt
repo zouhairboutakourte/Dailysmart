@@ -6,6 +6,13 @@ import org.junit.Test
 
 class AssistantEngineTest {
     @Test
+    fun parsesHabitCreationInEnglishAndArabizi() {
+        assertEquals(AssistantAction.AddHabit("drink 2L water"), AssistantEngine.parse("add habit drink 2L water"))
+        assertEquals(AssistantAction.AddHabit("n9ra 10 pages"), AssistantEngine.parse("zid lia 3ada n9ra 10 pages"))
+        assertEquals(AssistantAction.AddHabit("شرب الماء"), AssistantEngine.parse("زيد عادة شرب الماء"))
+    }
+
+    @Test
     fun parsesDarijaExpenseCommand() {
         val action = AssistantEngine.parse("sajel masrouf 45 qhwa")
         assertTrue(action is AssistantAction.AddMoney)
