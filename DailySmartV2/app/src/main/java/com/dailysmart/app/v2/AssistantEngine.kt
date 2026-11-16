@@ -72,7 +72,7 @@ object AssistantEngine {
                     .split(Regex("""\s+"""))
                     .filterNot { token -> token.trim(' ', ':', '-', '،', ',').lowercase() in currencyTokens }
                     .joinToString(" ")
-                    .replace(Regex("""(?i)^(on|for|at|in|sur|pour|à|au|3la|f|l|في|على)\s+"""), "")
+                    .replace(Regex("""(?i)^(on|for|at|sur|pour|à|au|3la|f|l|في|على)\s+"""), "")
                     .trim(' ', ':', '-', '،', ',')
                 if (description.isBlank()) description = if (isIncome) "Income" else "Expense"
                 if (description.length > 500) return AssistantAction.Help
