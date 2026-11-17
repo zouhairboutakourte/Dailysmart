@@ -10,6 +10,7 @@ sealed class AssistantAction {
     data class AddMoney(val amount: Double, val description: String, val income: Boolean) : AssistantAction()
     data class AddReminder(val title: String, val triggerAt: Long) : AssistantAction()
     data object FinanceReport : AssistantAction()
+    data class ExportReport(val scope: String) : AssistantAction()
     data object Help : AssistantAction()
 }
 
