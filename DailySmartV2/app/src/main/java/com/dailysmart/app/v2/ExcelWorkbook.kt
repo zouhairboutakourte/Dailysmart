@@ -84,10 +84,10 @@ object ExcelWorkbook {
             val income=items.filter{it.income}.sumOf{it.amount}; val expense=items.filterNot{it.income}.sumOf{it.amount}
             val cats=items.filterNot{it.income}.groupBy{FinanceAnalytics.categoryFor(it.title)}.mapValues{it.value.sumOf{m->m.amount}}.toList().sortedByDescending{it.second}
             val dash=mutableListOf(listOf("DailySmart Dashboard"),listOf("Generated",java.time.LocalDate.now().toString()),listOf("Income MAD",income.toString()),listOf("Expenses MAD",expense.toString()),listOf("Net balance MAD",(income-expense).toString()),listOf("Transactions",items.size.toString()),listOf("Top category",cats.firstOrNull()?.first?:"—"),listOf("Category","Expenses MAD","Visual bar"))
-            cats.forEachIndexed{i,p->dash+=listOf(p.first,p.second.toString(),"=REPT(\"█\",ROUND(B${i+9}/MAX($B$9:$B${cats.size+8})*20,0))")}
+            cats.forEachIndexed{i,p->dash+=listOf(p.first,p.second.toString(),"=REPT(\"█\",ROUND(B${i+9}/MAX(\$B\$9:\$B\${cats.size+8})*20,0))")}
             sheets+=makeSheet("Dashboard",dash)
             sheets+=makeSheet("Finance",listOf(listOf("Type","Description","Amount MAD","Date","Category"))+items.map{listOf(if(it.income)"Income" else "Expense",it.title,it.amount.toString(),FinanceAnalytics.dateString(it.createdAt),if(it.income)"Income" else FinanceAnalytics.categoryFor(it.title))})
-            sheets+=makeSheet("Categories",listOf(listOf("Category","Expenses MAD","Visual bar"))+cats.mapIndexed{i,p->listOf(p.first,p.second.toString(),"=REPT(\"█\",ROUND(B${i+2}/MAX($B$2:$B${cats.size+1})*20,0))")})
+            sheets+=makeSheet("Categories",listOf(listOf("Category","Expenses MAD","Visual bar"))+cats.mapIndexed{i,p->listOf(p.first,p.second.toString(),"=REPT(\"█\",ROUND(B${i+2}/MAX(\$B\$2:\$B\${cats.size+1})*20,0))")})
         }
         if(scope=="all"||scope=="tasks") sheets+=makeSheet("Tasks",listOf(listOf("Task","Status"))+tasks.map{listOf(it.title,if(it.done)"Completed" else "Pending")})
         if(scope=="all"||scope=="habits") sheets+=makeSheet("Habits",listOf(listOf("Habit","Completed today"))+habits.map{listOf(it.title,if(it.completedToday)"Yes" else "No")})
