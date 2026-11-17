@@ -46,14 +46,14 @@ import java.util.Locale
 import java.io.InputStream
 import kotlinx.coroutines.launch
 
-private val Navy = Color(0xFF0B1224)
-private val Panel = Color(0xFF151F36)
-private val PanelRaised = Color(0xFF1C2945)
-private val Accent = Color(0xFF8B7CFF)
-private val Lavender = Color(0xFFB69CFF)
+private val Navy = Color(0xFF071A33)
+private val Panel = Color(0xFF0D2948)
+private val PanelRaised = Color(0xFF12395F)
+private val Accent = Color(0xFF3B9CFF)
+private val Lavender = Color(0xFF80C4FF)
 private val Gold = Color(0xFFF6C76A)
 private val ExpenseColor = Color(0xFFFF718B)
-private val Muted = Color(0xFFB4BED0)
+private val Muted = Color(0xFFB8CDE2)
 private val White = Color(0xFFF7F8FC)
 
 class MainActivity : ComponentActivity() {
@@ -351,15 +351,15 @@ fun DailySmartApp() {
                 listOf("Assistant", "Finance", "Tasks", "Habits", "Reminders").forEach { name ->
                     NavigationBarItem(selected = tab == name, onClick = { tab = name }, icon = {
                         Icon(when(name) { "Assistant" -> Icons.Default.AutoAwesome; "Finance" -> Icons.Default.AccountBalanceWallet; "Tasks" -> Icons.Default.CheckCircle; "Habits" -> Icons.Default.Favorite; "Reminders" -> Icons.Default.Notifications; "Excel" -> Icons.Default.TableChart; else -> Icons.Default.Settings }, null)
-                    }, label = { Text(uiText(language, name, when(name) { "Assistant" -> "Assistant"; "Finance" -> "Finances"; "Tasks" -> "Tâches"; "Habits" -> "Habitudes"; "Reminders" -> "Rappels"; "Excel" -> "Excel"; else -> "Paramètres" }, when(name) { "Assistant" -> "المساعد"; "Finance" -> "المالية"; "Tasks" -> "المهام"; "Habits" -> "العادات"; "Reminders" -> "التذكيرات"; "Excel" -> "إكسيل"; else -> "الإعدادات" })) }, colors = NavigationBarItemDefaults.colors(selectedIconColor = Accent, selectedTextColor = Accent, indicatorColor = Color(0xFF302A59), unselectedTextColor = Muted))
+                    }, label = { Text(uiText(language, name, when(name) { "Assistant" -> "Assistant"; "Finance" -> "Finances"; "Tasks" -> "Tâches"; "Habits" -> "Habitudes"; "Reminders" -> "Rappels"; "Excel" -> "Excel"; else -> "Paramètres" }, when(name) { "Assistant" -> "المساعد"; "Finance" -> "المالية"; "Tasks" -> "المهام"; "Habits" -> "العادات"; "Reminders" -> "التذكيرات"; "Excel" -> "إكسيل"; else -> "الإعدادات" })) }, colors = NavigationBarItemDefaults.colors(selectedIconColor = Accent, selectedTextColor = Accent, indicatorColor = Color(0xFF174A78), unselectedTextColor = Muted))
                 }
             }
         }) { pad ->
-            Column(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Navy, Color(0xFF101A30), Color(0xFF0D172B)))).padding(pad).padding(horizontal = 18.dp).then(if (tab == "Assistant" || tab == "Excel" || tab == "Settings" || tab == "Reminders") Modifier.verticalScroll(rememberScrollState()) else Modifier)) {
+            Column(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Navy, Color(0xFF0B2442), Color(0xFF081D36)))).padding(pad).padding(horizontal = 18.dp).then(if (tab == "Assistant" || tab == "Excel" || tab == "Settings" || tab == "Reminders") Modifier.verticalScroll(rememberScrollState()) else Modifier)) {
                 Spacer(Modifier.height(14.dp))
                 Box(
                     Modifier.fillMaxWidth().clip(RoundedCornerShape(26.dp))
-                        .background(Brush.linearGradient(listOf(Color(0xFF4338CA), Color(0xFF6D4AFF), Color(0xFF2563EB))))
+                        .background(Brush.linearGradient(listOf(Color(0xFF145DA0), Color(0xFF1976D2), Color(0xFF42A5F5))))
                         .padding(18.dp)
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -464,7 +464,7 @@ fun DailySmartApp() {
                         }
                         Spacer(Modifier.height(12.dp))
                         val dailyQuote = DailyQuoteProvider.quoteFor(java.time.LocalDate.now().dayOfYear, language)
-                        Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF1C2945)), shape = RoundedCornerShape(18.dp)) {
+                        Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF12395F)), shape = RoundedCornerShape(18.dp)) {
                             Column(Modifier.fillMaxWidth().padding(15.dp)) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Icon(Icons.Default.FormatQuote, null, tint = Lavender)
