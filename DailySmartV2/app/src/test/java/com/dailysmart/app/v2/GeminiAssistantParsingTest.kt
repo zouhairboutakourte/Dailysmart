@@ -51,6 +51,14 @@ class GeminiAssistantParsingTest {
     }
 
     @Test
+    fun parsesExportReportScopes() {
+        val result = GeminiAssistant.parseInterpretation("""{"reply":"Preparing Excel.","action":"export_report","scope":"all"}""")
+        assertEquals(AssistantAction.ExportReport("all"), result.action)
+        val invalid = GeminiAssistant.parseInterpretation("""{"reply":"Clarify.","action":"export_report","scope":"everything"}""")
+        assertNull(invalid.action)
+    }
+
+    @Test
     fun parsesTaskAndFinanceReport() {
         val task = GeminiAssistant.parseInterpretation(
             """{"reply":"I can add this task.","action":"add_task","title":"Call the bank","amount":0,"description":""}"""
