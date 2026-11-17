@@ -84,6 +84,8 @@ class GeminiAssistantParsingTest {
         assertTrue(GeminiAssistant.hasNonMadCurrency("paid \\$15"))
         assertFalse(GeminiAssistant.hasNonMadCurrency("صرف 45 DH"))
         assertFalse(GeminiAssistant.hasNonMadCurrency("spent 45 MAD"))
+        assertTrue(GeminiAssistant.hasNonMadCurrency("دفعت 20 يورو"))
+        assertTrue(GeminiAssistant.hasNonMadCurrency("50 ريال سعودي"))
     }
 
     @Test
