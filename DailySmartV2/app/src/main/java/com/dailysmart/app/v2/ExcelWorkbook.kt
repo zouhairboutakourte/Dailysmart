@@ -74,6 +74,35 @@ object ExcelWorkbook {
         return out.toByteArray()
     }
 
+    /** Multi-sheet workbook assembled locally from app records. */
+    fun exportWorkspace(items: List<MoneyItem>, tasks: List<TaskItem>, habits: List<HabitItem>, scope: String, language: String): ByteArray {
+        val sheets = mutableListOf<Pair<String,String>>()
+        fun makeSheet(name:String, rows:List<List<String>>):Pair<String,String> {
+            val xml=buildString { append("<?xml version=\"1.0\" encoding=\"UTF-8\"?><worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\"><sheetData>"); rows.forEachIndexed { ri,row -> append("<row r=\"${ri+1}\">"); row.forEachIndexed { ci,v -> append(cell(ci,ri+1,v)) }; append("</row>") }; append("</sheetData></worksheet>") }; return name to xml
+        }
+        if(scope=="all"||scope=="finance"){
+            val income=items.filter{it.income}.sumOf{it.amount}; val expense=items.filterNot{it.income}.sumOf{it.amount}
+            val cats=items.filterNot{it.income}.groupBy{FinanceAnalytics.categoryFor(it.title)}.mapValues{it.value.sumOf{m->m.amount}}.toList().sortedByDescending{it.second}
+            val dash=mutableListOf(listOf("DailySmart Dashboard"),listOf("Generated",java.time.LocalDate.now().toString()),listOf("Income MAD",income.toString()),listOf("Expenses MAD",expense.toString()),listOf("Net balance MAD",(income-expense).toString()),listOf("Transactions",items.size.toString()),listOf("Top category",cats.firstOrNull()?.first?:"—"),listOf("Category","Expenses MAD","Visual bar"))
+            cats.forEachIndexed{i,p->dash+=listOf(p.first,p.second.toString(),"=REPT(\"█\",ROUND(B${i+9}/MAX($B$9:$B${cats.size+8})*20,0))")}
+            sheets+=makeSheet("Dashboard",dash)
+            sheets+=makeSheet("Finance",listOf(listOf("Type","Description","Amount MAD","Date","Category"))+items.map{listOf(if(it.income)"Income" else "Expense",it.title,it.amount.toString(),FinanceAnalytics.dateString(it.createdAt),if(it.income)"Income" else FinanceAnalytics.categoryFor(it.title))})
+            sheets+=makeSheet("Categories",listOf(listOf("Category","Expenses MAD","Visual bar"))+cats.mapIndexed{i,p->listOf(p.first,p.second.toString(),"=REPT(\"█\",ROUND(B${i+2}/MAX($B$2:$B${cats.size+1})*20,0))")})
+        }
+        if(scope=="all"||scope=="tasks") sheets+=makeSheet("Tasks",listOf(listOf("Task","Status"))+tasks.map{listOf(it.title,if(it.done)"Completed" else "Pending")})
+        if(scope=="all"||scope=="habits") sheets+=makeSheet("Habits",listOf(listOf("Habit","Completed today"))+habits.map{listOf(it.title,if(it.completedToday)"Yes" else "No")})
+        val out=ByteArrayOutputStream(); ZipOutputStream(out).use{zip->
+            val overrides=sheets.indices.joinToString(""){i->"<Override PartName=\"/xl/worksheets/sheet${i+1}.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml\"/>"}
+            put(zip,"[Content_Types].xml","<?xml version=\"1.0\"?><Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\"><Default Extension=\"rels\" ContentType=\"application/vnd.openxmlformats-package.relationships+xml\"/><Default Extension=\"xml\" ContentType=\"application/xml\"/><Override PartName=\"/xl/workbook.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml\"/>$overrides</Types>")
+            put(zip,"_rels/.rels","<?xml version=\"1.0\"?><Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument\" Target=\"xl/workbook.xml\"/></Relationships>")
+            val nodes=sheets.mapIndexed{i,s->"<sheet name=\"${s.first}\" sheetId=\"${i+1}\" r:id=\"rId${i+1}\"/>"}.joinToString("")
+            put(zip,"xl/workbook.xml","<?xml version=\"1.0\"?><workbook xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\"><sheets>$nodes</sheets></workbook>")
+            val rels=sheets.mapIndexed{i,_->"<Relationship Id=\"rId${i+1}\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet\" Target=\"worksheets/sheet${i+1}.xml\"/>"}.joinToString("")
+            put(zip,"xl/_rels/workbook.xml.rels","<?xml version=\"1.0\"?><Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">$rels</Relationships>")
+            sheets.forEachIndexed{i,s->put(zip,"xl/worksheets/sheet${i+1}.xml",s.second)}
+        }; return out.toByteArray()
+    }
+
     fun importFinance(bytes: ByteArray): List<MoneyItem> {
         require(bytes.isNotEmpty()) { "The selected workbook is empty." }
         require(bytes.size <= MAX_INPUT_BYTES) { "Workbook is too large. Maximum supported size is 10 MB." }
