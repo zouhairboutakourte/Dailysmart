@@ -78,7 +78,7 @@ object ExcelWorkbook {
     fun exportWorkspace(items: List<MoneyItem>, tasks: List<TaskItem>, habits: List<HabitItem>, scope: String, language: String): ByteArray {
         val sheets = mutableListOf<Pair<String,String>>()
         fun makeSheet(name:String, rows:List<List<String>>):Pair<String,String> {
-            val xml=buildString { append("<?xml version=\"1.0\" encoding=\"UTF-8\"?><worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\"><sheetData>"); rows.forEachIndexed { ri,row -> append("<row r=\"${ri+1}\">"); row.forEachIndexed { ci,v -> if (v.startsWith("=")) { val ref = columnName(ci) + (ri + 1); append("<c r=\"$ref\"><f>${v.drop(1)}</f></c>") } else append(cell(ci,ri+1,v)) }; append("</row>") }; append("</sheetData></worksheet>") }; return name to xml
+            val xml=buildString { append("<?xml version=\"1.0\" encoding=\"UTF-8\"?><worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\"><sheetData>"); rows.forEachIndexed { ri,row -> append("<row r=\"${ri+1}\">"); row.forEachIndexed { ci,v -> append(cell(ci,ri+1,v)) }; append("</row>") }; append("</sheetData></worksheet>") }; return name to xml
         }
         if(scope=="all"||scope=="finance"){
             val income=items.filter{it.income}.sumOf{it.amount}; val expense=items.filterNot{it.income}.sumOf{it.amount}
