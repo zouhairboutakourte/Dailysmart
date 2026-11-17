@@ -107,6 +107,7 @@ fun DailySmartApp() {
     var info by remember { mutableStateOf(uiText(language, "Your personal workspace is ready.", "Votre espace est prêt.", "مساحتك الشخصية واجدة.")) }
     var pendingRestore by remember { mutableStateOf<BackupCodec.Snapshot?>(null) }
     var pendingAssistantAction by remember { mutableStateOf<AssistantAction?>(null) }
+    var reportScope by remember { mutableStateOf("all") }
     var reminders by remember { mutableStateOf(ReminderManager.load(context)) }
     var reminderTitle by remember { mutableStateOf("") }
     var reminderDate by remember { mutableStateOf(LocalDate.now()) }
@@ -219,7 +220,7 @@ fun DailySmartApp() {
 
     val xlsxExportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")) { uri ->
         if (uri != null) runCatching {
-            context.contentResolver.openOutputStream(uri)?.use { it.write(ExcelWorkbook.exportFinance(money)) }
+            context.contentResolver.openOutputStream(uri)?.use { it.write(ExcelWorkbook.exportWorkspace(money, tasks, habits, reportScope, language)) }
             info = uiText(language, "Excel workbook exported successfully.", "Classeur Excel exporté avec succès.", "تم تصدير ملف Excel بنجاح.")
         }.onFailure { info = uiText(language, "Excel export failed. Please try again.", "Échec de l’export Excel. Réessayez.", "فشل تصدير Excel. حاول مرة أخرى.") }
     }
@@ -404,6 +405,11 @@ fun DailySmartApp() {
                                 is AssistantAction.AddTask, is AssistantAction.AddHabit, is AssistantAction.AddMoney, is AssistantAction.AddReminder -> {
                                     pendingAssistantAction = action
                                 }
+                                is AssistantAction.ExportReport -> {
+                                    reportScope = action.scope
+                                    xlsxExportLauncher.launch("DailySmart-${action.scope}-report.xlsx")
+                                    command = ""
+                                }
                                 AssistantAction.FinanceReport -> {
                                     showFinanceReport()
                                     command = ""
@@ -419,6 +425,7 @@ fun DailySmartApp() {
                                                 info = interpretation.reply
                                                 when (val aiAction = interpretation.action) {
                                                     is AssistantAction.AddTask, is AssistantAction.AddHabit, is AssistantAction.AddMoney, is AssistantAction.AddReminder -> pendingAssistantAction = aiAction
+                                                    is AssistantAction.ExportReport -> { reportScope = aiAction.scope; xlsxExportLauncher.launch("DailySmart-${aiAction.scope}-report.xlsx") }
                                                     AssistantAction.FinanceReport -> showFinanceReport()
                                                     else -> Unit
                                                 }
