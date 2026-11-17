@@ -46,15 +46,15 @@ import java.util.Locale
 import java.io.InputStream
 import kotlinx.coroutines.launch
 
-private val Navy = Color(0xFFF6F7FF)
-private val Panel = Color(0xFFFFFFFF)
-private val PanelRaised = Color(0xFFEEF2FF)
-private val Accent = Color(0xFF4F46E5)
-private val Lavender = Color(0xFF8B5CF6)
-private val Gold = Color(0xFFF59E0B)
-private val ExpenseColor = Color(0xFFE85D75)
-private val Muted = Color(0xFF64748B)
-private val White = Color(0xFF182235)
+private val Navy = Color(0xFF0B1224)
+private val Panel = Color(0xFF151F36)
+private val PanelRaised = Color(0xFF1C2945)
+private val Accent = Color(0xFF8B7CFF)
+private val Lavender = Color(0xFFB69CFF)
+private val Gold = Color(0xFFF6C76A)
+private val ExpenseColor = Color(0xFFFF718B)
+private val Muted = Color(0xFFB4BED0)
+private val White = Color(0xFFF7F8FC)
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -232,7 +232,7 @@ fun DailySmartApp() {
         }.onFailure { info = uiText(language, "Could not import this workbook. Check that it is a DailySmart finance file.", "Impossible d’importer ce classeur. Vérifiez qu’il s’agit d’un fichier financier DailySmart.", "تعذر استيراد الملف. تأكد أنه ملف مالي بصيغة DailySmart.") }
     }
 
-    MaterialTheme(colorScheme = lightColorScheme(background = Navy, surface = Panel, primary = Accent, secondary = Lavender, onBackground = White, onSurface = White)) {
+    MaterialTheme(colorScheme = darkColorScheme(background = Navy, surface = Panel, primary = Accent, secondary = Lavender, onBackground = White, onSurface = White)) {
       CompositionLocalProvider(LocalLayoutDirection provides if (language == "ar") LayoutDirection.Rtl else LayoutDirection.Ltr) {
         pendingAssistantAction?.let { action ->
         val actionTitle = when (action) {
@@ -351,11 +351,11 @@ fun DailySmartApp() {
                 listOf("Assistant", "Finance", "Tasks", "Habits", "Reminders").forEach { name ->
                     NavigationBarItem(selected = tab == name, onClick = { tab = name }, icon = {
                         Icon(when(name) { "Assistant" -> Icons.Default.AutoAwesome; "Finance" -> Icons.Default.AccountBalanceWallet; "Tasks" -> Icons.Default.CheckCircle; "Habits" -> Icons.Default.Favorite; "Reminders" -> Icons.Default.Notifications; "Excel" -> Icons.Default.TableChart; else -> Icons.Default.Settings }, null)
-                    }, label = { Text(uiText(language, name, when(name) { "Assistant" -> "Assistant"; "Finance" -> "Finances"; "Tasks" -> "Tâches"; "Habits" -> "Habitudes"; "Reminders" -> "Rappels"; "Excel" -> "Excel"; else -> "Paramètres" }, when(name) { "Assistant" -> "المساعد"; "Finance" -> "المالية"; "Tasks" -> "المهام"; "Habits" -> "العادات"; "Reminders" -> "التذكيرات"; "Excel" -> "إكسيل"; else -> "الإعدادات" })) }, colors = NavigationBarItemDefaults.colors(selectedIconColor = Accent, selectedTextColor = Accent, indicatorColor = Color(0xFFE8E9FF), unselectedTextColor = Muted))
+                    }, label = { Text(uiText(language, name, when(name) { "Assistant" -> "Assistant"; "Finance" -> "Finances"; "Tasks" -> "Tâches"; "Habits" -> "Habitudes"; "Reminders" -> "Rappels"; "Excel" -> "Excel"; else -> "Paramètres" }, when(name) { "Assistant" -> "المساعد"; "Finance" -> "المالية"; "Tasks" -> "المهام"; "Habits" -> "العادات"; "Reminders" -> "التذكيرات"; "Excel" -> "إكسيل"; else -> "الإعدادات" })) }, colors = NavigationBarItemDefaults.colors(selectedIconColor = Accent, selectedTextColor = Accent, indicatorColor = Color(0xFF302A59), unselectedTextColor = Muted))
                 }
             }
         }) { pad ->
-            Column(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Navy, Color(0xFFEEF2FF), Color(0xFFF9FAFF)))).padding(pad).padding(horizontal = 18.dp).then(if (tab == "Assistant" || tab == "Excel" || tab == "Settings" || tab == "Reminders") Modifier.verticalScroll(rememberScrollState()) else Modifier)) {
+            Column(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Navy, Color(0xFF101A30), Color(0xFF0D172B)))).padding(pad).padding(horizontal = 18.dp).then(if (tab == "Assistant" || tab == "Excel" || tab == "Settings" || tab == "Reminders") Modifier.verticalScroll(rememberScrollState()) else Modifier)) {
                 Spacer(Modifier.height(14.dp))
                 Box(
                     Modifier.fillMaxWidth().clip(RoundedCornerShape(26.dp))
@@ -464,7 +464,7 @@ fun DailySmartApp() {
                         }
                         Spacer(Modifier.height(12.dp))
                         val dailyQuote = DailyQuoteProvider.quoteFor(java.time.LocalDate.now().dayOfYear, language)
-                        Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF232C4A)), shape = RoundedCornerShape(18.dp)) {
+                        Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF1C2945)), shape = RoundedCornerShape(18.dp)) {
                             Column(Modifier.fillMaxWidth().padding(15.dp)) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Icon(Icons.Default.FormatQuote, null, tint = Lavender)
