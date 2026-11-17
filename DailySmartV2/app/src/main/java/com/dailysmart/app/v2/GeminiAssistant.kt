@@ -65,7 +65,7 @@ object GeminiAssistant {
             Use MAD / Moroccan dirham only when currency is omitted or clearly MAD.
             Current local date/time: $localDateTime. Local time zone: $localZone.
             Return ONLY one valid JSON object, without Markdown or code fences, using this schema:
-            {"reply":"short user-facing message","action":"chat|add_task|add_habit|add_expense|add_income|finance_report|export_report|add_reminder","title":"","amount":0,"description":"","trigger_at":""}
+            {"reply":"short user-facing message","action":"chat|add_task|add_habit|add_expense|add_income|finance_report|export_report|add_reminder","scope":"finance|tasks|habits|all","title":"","amount":0,"description":"","trigger_at":""}
 
             Language understanding:
             - Understand Moroccan Darija whether written in Arabic script or Latin transliteration (Arabizi), including mixed Arabic/French/English sentences.
