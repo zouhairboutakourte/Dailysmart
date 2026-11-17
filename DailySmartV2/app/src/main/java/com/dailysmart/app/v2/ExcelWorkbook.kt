@@ -84,10 +84,14 @@ object ExcelWorkbook {
             val income=items.filter{it.income}.sumOf{it.amount}; val expense=items.filterNot{it.income}.sumOf{it.amount}
             val cats=items.filterNot{it.income}.groupBy{FinanceAnalytics.categoryFor(it.title)}.mapValues{it.value.sumOf{m->m.amount}}.toList().sortedByDescending{it.second}
             val dash=mutableListOf(listOf("DailySmart Dashboard"),listOf("Generated",java.time.LocalDate.now().toString()),listOf("Income MAD",income.toString()),listOf("Expenses MAD",expense.toString()),listOf("Net balance MAD",(income-expense).toString()),listOf("Transactions",items.size.toString()),listOf("Top category",cats.firstOrNull()?.first?:"—"),listOf("Category","Expenses MAD","Visual bar"))
-            cats.forEachIndexed{i,p->dash+=listOf(p.first,p.second.toString(),"=REPT(\"█\",ROUND(B${i+9}/MAX(\$B\$9:\$B\${cats.size+8})*20,0))")}
+            val maxCategory=cats.maxOfOrNull{it.second}?:0.0; cats.forEach{p->dash+=listOf(p.first,p.second.toString(),"█".repeat(if(maxCategory>0)(p.second/maxCategory*20).toInt().coerceAtLeast(1) else 0))}
             sheets+=makeSheet("Dashboard",dash)
             sheets+=makeSheet("Finance",listOf(listOf("Type","Description","Amount MAD","Date","Category"))+items.map{listOf(if(it.income)"Income" else "Expense",it.title,it.amount.toString(),FinanceAnalytics.dateString(it.createdAt),if(it.income)"Income" else FinanceAnalytics.categoryFor(it.title))})
-            sheets+=makeSheet("Categories",listOf(listOf("Category","Expenses MAD","Visual bar"))+cats.mapIndexed{i,p->listOf(p.first,p.second.toString(),"=REPT(\"█\",ROUND(B${i+2}/MAX(\$B\$2:\$B\${cats.size+1})*20,0))")})
+            val monthly=items.filter{it.createdAt>0L}.groupBy{java.time.Instant.ofEpochMilli(it.createdAt).atZone(java.time.ZoneId.systemDefault()).toLocalDate().withDayOfMonth(1)}.toList().sortedBy{it.first}
+            val monthlyTotals=monthly.map{m->Triple(m.first,m.second.filter{it.income}.sumOf{it.amount},m.second.filterNot{it.income}.sumOf{it.amount})}
+            val maxMonthly=monthlyTotals.maxOfOrNull{it.third}?:0.0
+            sheets+=makeSheet("Monthly",listOf(listOf("Month","Income MAD","Expenses MAD","Net MAD","Expense visual"))+monthlyTotals.map{m->listOf(m.first.toString(),m.second.toString(),m.third.toString(),(m.second-m.third).toString(),"█".repeat(if(maxMonthly>0)(m.third/maxMonthly*20).toInt().coerceAtLeast(1) else 0))})
+            sheets+=makeSheet("Categories",listOf(listOf("Category","Expenses MAD","Visual bar"))+cats.map{p->listOf(p.first,p.second.toString(),"█".repeat(if(maxCategory>0)(p.second/maxCategory*20).toInt().coerceAtLeast(1) else 0))})
         }
         if(scope=="all"||scope=="tasks") sheets+=makeSheet("Tasks",listOf(listOf("Task","Status"))+tasks.map{listOf(it.title,if(it.done)"Completed" else "Pending")})
         if(scope=="all"||scope=="habits") sheets+=makeSheet("Habits",listOf(listOf("Habit","Completed today"))+habits.map{listOf(it.title,if(it.completedToday)"Yes" else "No")})
