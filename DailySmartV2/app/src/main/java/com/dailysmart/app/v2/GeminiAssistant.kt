@@ -70,9 +70,16 @@ object GeminiAssistant {
             Language understanding:
             - Understand Moroccan Darija whether written in Arabic script or Latin transliteration (Arabizi), including mixed Arabic/French/English sentences.
             - Recognize common Arabizi numerals: 3 = ع, 7 = ح, 9 = ق, 5/kh = خ,  gh = غ. These may appear inside words, not as amounts.
-            - Examples: "sraft 50dh f l9hwa" = expense 50 MAD for coffee; "khlest 120 dh l internet" = expense; "dkhelt 8000 salaire" = income; "zid lia mohimma n3ayet l'assurance" = create a task; "ch7al sraft?" = local finance report.
-            - Preserve the user's original description naturally; do not mistake Arabizi digits embedded in words (such as l9hwa or n3ayet) for money amounts.
-            - If intent or amount is unclear, ask a brief clarification instead of guessing.
+            - Understand intent even when the sentence starts conversationally: "bghit nزيد", "wach t9der", "3afak", "ana", "lyom", "had sbah", or "lbare7". Ignore polite filler; extract only the requested action and its actual details.
+            - Expense examples: "sraft 50dh f l9hwa", "ana khlest 120 dh internet", "chrit khobz b 8 dh", "خلصت 120 درهم ديال الإنترنت". These are expenses; preserve descriptions such as "internet" exactly and never trim them as grammar words.
+            - Income examples: "dkhelt 8000 salaire", "d5el lia 9000 dh", "وصلني 500 درهم من الخدمة". These are income records.
+            - Task examples: "zid lia mohimma n3ayet l'assurance", "3afak dir task nخلص facture", "زيد مهمة نتاصل بالبنك".
+            - Habit examples: "zid lia 3ada n9ra 10 pages", "bghit nزيد عادة نشرب الماء". Only use add_habit for a repeatable behavior, not a one-time task.
+            - Finance questions: "ch7al sraft?", "ch7al ba9i lia?", "fin mchaw flosi?", "عطيني ملخص المصاريف" = finance_report. The app computes the answer from local records; never invent totals.
+            - Reminder examples: create only one-time reminders when both the date and time are explicit and in the future. Ask a clarification for missing or ambiguous time.
+            - Arabizi digits 3, 7, 9, 5 are often letters inside words. Never extract them as money or quantities unless they are clearly a standalone numeric amount or quantity.
+            - Preserve useful descriptions and names. In particular, do not remove the word "internet" or other words merely because they begin with a short preposition-like sequence.
+            - If the intent, amount, currency, description, date, or time is unclear, ask one short clarification instead of guessing.
             
             Safety and accuracy rules:
             - You may propose exactly one new task, one new habit, one expense, one income record, one one-time reminder, or a finance report.
@@ -87,7 +94,10 @@ object GeminiAssistant {
             - Recurring reminders are not supported yet; if the user asks for daily, weekly or repeating reminders, use action "chat" and explain that only one-time reminders are available.
             - For add_reminder, return trigger_at as an ISO 8601 date-time with the numeric UTC offset for the supplied local time zone. Use the current local date/time above to interpret relative dates. If the user gives no clear future time, use action "chat" and ask a short follow-up question.
             - Never claim that a reminder was scheduled; the app asks the user to confirm before scheduling it.
-            - For deleting, editing existing records, checking off habits, or any unsupported operation, use action "chat" and explain that it is not supported yet.
+            - Never infer that "I want to", "maybe", or a hypothetical example means the user wants to save a record; ask before proposing an action if intent is not direct.
+            - For deleting, editing existing records, changing amounts, checking off habits, or any unsupported operation, use action "chat" and explain that this operation is not available yet. Never claim it was completed.
+            - If a message contains two or more requested changes, do not create a partial record. Ask the user to send one action at a time.
+            - Never make up a title, amount, description, date, time, currency, or financial total.
             - Do not invent or assume any financial records. You do not receive the user's stored data.
             - Keep reply concise and in the requested language. Use empty strings and amount 0 for fields that do not apply.
 
@@ -98,7 +108,7 @@ object GeminiAssistant {
         val model = Firebase.ai(
             backend = GenerativeBackend.googleAI(),
             useLimitedUseAppCheckTokens = true
-        ).generativeModel("gemini-3.5-flash")
+        ).generativeModel("gemini-3.8-flash")
         val response = model.generateContent(prompt)
         val raw = response.text?.trim().orEmpty()
         if (raw.isEmpty()) return AssistantInterpretation("Gemini returned an empty response. Please try again.", null)
@@ -114,7 +124,7 @@ object GeminiAssistant {
     }
 
     internal fun hasNonMadCurrency(value: String): Boolean =
-        Regex("""(?i)(?:\b(?:usd|eur|euro|euros|dollar|dollars|gbp|pound|pounds)\b|[$€£])""")
+        Regex("""(?i)(?:\b(?:usd|eur|euro|euros|dollar|dollars|gbp|pound|pounds)\b|[$€£]|دولار|دولارات|يورو|أورو|ريال سعودي|ريال قطري)""")
             .containsMatchIn(value)
 
     internal fun parseInterpretation(raw: String): AssistantInterpretation {
