@@ -51,7 +51,8 @@ private val Panel = Color(0xFF0D2948)
 private val PanelRaised = Color(0xFF12395F)
 private val Accent = Color(0xFF3B9CFF)
 private val Lavender = Color(0xFF80C4FF)
-private val Gold = Color(0xFFF6C76A)
+private val Gold = Color(0xFFFFC857)
+private val Teal = Color(0xFF35D0BA)
 private val ExpenseColor = Color(0xFFFF718B)
 private val Muted = Color(0xFFB8CDE2)
 private val White = Color(0xFFF7F8FC)
@@ -232,7 +233,7 @@ fun DailySmartApp() {
         }.onFailure { info = uiText(language, "Could not import this workbook. Check that it is a DailySmart finance file.", "Impossible d’importer ce classeur. Vérifiez qu’il s’agit d’un fichier financier DailySmart.", "تعذر استيراد الملف. تأكد أنه ملف مالي بصيغة DailySmart.") }
     }
 
-    MaterialTheme(colorScheme = darkColorScheme(background = Navy, surface = Panel, primary = Accent, secondary = Lavender, onBackground = White, onSurface = White)) {
+    MaterialTheme(colorScheme = darkColorScheme(background = Navy, surface = Panel, primary = Accent, secondary = Teal, onBackground = White, onSurface = White)) {
       CompositionLocalProvider(LocalLayoutDirection provides if (language == "ar") LayoutDirection.Rtl else LayoutDirection.Ltr) {
         pendingAssistantAction?.let { action ->
         val actionTitle = when (action) {
@@ -467,9 +468,9 @@ fun DailySmartApp() {
                         Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF12395F)), shape = RoundedCornerShape(18.dp)) {
                             Column(Modifier.fillMaxWidth().padding(15.dp)) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(Icons.Default.FormatQuote, null, tint = Lavender)
+                                    Icon(Icons.Default.FormatQuote, null, tint = Gold)
                                     Spacer(Modifier.width(7.dp))
-                                    Text(uiText(language, "DAILY INSPIRATION", "INSPIRATION DU JOUR", "إلهام اليوم"), color = Lavender, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.8.sp)
+                                    Text(uiText(language, "DAILY INSPIRATION", "INSPIRATION DU JOUR", "إلهام اليوم"), color = Gold, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.8.sp)
                                 }
                                 Spacer(Modifier.height(7.dp))
                                 Text(dailyQuote, color = White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
@@ -504,7 +505,7 @@ fun DailySmartApp() {
                         val expense = money.filterNot { it.income }.sumOf { it.amount }
                         val analytics = FinanceAnalytics.summarize(money)
                         Text(uiText(language, "PERSONAL FINANCE", "FINANCES PERSONNELLES", "المالية الشخصية"), color = Muted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) { SummaryCard(uiText(language, "Income", "Revenu", "المدخول"), "${"%.2f".format(income)} DH", Modifier.weight(1f), Accent); SummaryCard(uiText(language, "Expenses", "Dépenses", "المصاريف"), "${"%.2f".format(expense)} DH", Modifier.weight(1f), ExpenseColor) }
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) { SummaryCard(uiText(language, "Income", "Revenu", "المدخول"), "${"%.2f".format(income)} DH", Modifier.weight(1f), Teal); SummaryCard(uiText(language, "Expenses", "Dépenses", "المصاريف"), "${"%.2f".format(expense)} DH", Modifier.weight(1f), ExpenseColor) }
                         SummaryCard(uiText(language, "Available balance", "Solde disponible", "الرصيد المتاح"), "${"%.2f".format(income-expense)} DH", Modifier.fillMaxWidth())
                         Card(colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(16.dp)) {
                             Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -512,7 +513,7 @@ fun DailySmartApp() {
                                 Text(uiText(language, "This week", "Cette semaine", "هاد الأسبوع"), color = Muted, fontSize = 12.sp)
                                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                                     Text(uiText(language, "Income", "Revenus", "المداخيل"), color = Muted)
-                                    Text("${"%.0f".format(analytics.weekIncome)} DH", color = Accent, fontWeight = FontWeight.Bold)
+                                    Text("${"%.0f".format(analytics.weekIncome)} DH", color = Teal, fontWeight = FontWeight.Bold)
                                 }
                                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                                     Text(uiText(language, "Expenses", "Dépenses", "المصاريف"), color = Muted)
@@ -522,7 +523,7 @@ fun DailySmartApp() {
                                 Text(uiText(language, "This month", "Ce mois", "هاد الشهر"), color = Muted, fontSize = 12.sp)
                                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                                     Text(uiText(language, "Income", "Revenus", "المداخيل"), color = Muted)
-                                    Text("${"%.0f".format(analytics.monthIncome)} DH", color = Accent, fontWeight = FontWeight.Bold)
+                                    Text("${"%.0f".format(analytics.monthIncome)} DH", color = Teal, fontWeight = FontWeight.Bold)
                                 }
                                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                                     Text(uiText(language, "Expenses", "Dépenses", "المصاريف"), color = Muted)
@@ -536,7 +537,7 @@ fun DailySmartApp() {
                                             "${uiText(language, "Month-to-date savings", "Épargne depuis le début du mois", "الادخار من بداية الشهر")}: ${"%.0f".format(savedPercent)}%"
                                         else
                                             "${uiText(language, "Overspending", "Dépenses supérieures aux revenus", "المصاريف فاتو المداخيل")}: ${"%.0f".format(-monthBalance)} DH",
-                                        color = if (monthBalance >= 0.0) Accent else ExpenseColor,
+                                        color = if (monthBalance >= 0.0) Teal else ExpenseColor,
                                         fontWeight = FontWeight.SemiBold,
                                         fontSize = 12.sp
                                     )
@@ -615,7 +616,7 @@ fun DailySmartApp() {
                             OutlinedButton(onClick = { val a = newAmount.replace(",", ".").toDoubleOrNull(); if (a != null && a.isFinite() && a > 0) { money = money + MoneyItem(newTitle.ifBlank { uiText(language, "Expense", "Dépense", "مصروف") }, a, false); saveMoney(); newTitle = ""; newAmount = "" } else { info = uiText(language, "Enter a valid amount greater than zero.", "Saisissez un montant valide supérieur à zéro.", "دخل مبلغ صحيح أكبر من صفر.") } }, modifier = Modifier.weight(1f)) { Text(uiText(language, "Add expense", "Ajouter une dépense", "إضافة مصروف")) }
                         }
                         if (money.isEmpty()) Text(uiText(language, "No transactions yet. Add your first income or expense.", "Aucune opération pour le moment.", "ما كايناش عمليات مالية دابا. زيد أول مدخول أو مصروف."), color = Muted, fontSize = 13.sp, modifier = Modifier.padding(vertical = 14.dp))
-                        LazyColumn(modifier = Modifier.weight(1f)) { itemsIndexed(money.reversed()) { index, item -> ListItem(headlineContent = { Text(item.title) }, supportingContent = { Column { Text(if(item.income) uiText(language, "Income", "Revenu", "مدخول") else uiText(language, "Expense", "Dépense", "مصروف"), color = Muted); Text(FinanceAnalytics.dateString(item.createdAt).ifBlank { uiText(language, "Date unavailable", "Date indisponible", "التاريخ غير متوفر") }, color = Muted, fontSize = 11.sp) } }, trailingContent = { Row(verticalAlignment = Alignment.CenterVertically) { Text("${if(item.income) "+" else "-"}${item.amount} DH", color = if(item.income) Accent else ExpenseColor, fontWeight = FontWeight.Bold); IconButton(onClick = { val originalIndex = money.lastIndex - index; money = money.toMutableList().also { it.removeAt(originalIndex) }; saveMoney() }) { Icon(Icons.Default.Delete, uiText(language, "Delete", "Supprimer", "حذف"), tint = Muted) } } }, colors = ListItemDefaults.colors(containerColor = Panel)) } }
+                        LazyColumn(modifier = Modifier.weight(1f)) { itemsIndexed(money.reversed()) { index, item -> ListItem(headlineContent = { Text(item.title) }, supportingContent = { Column { Text(if(item.income) uiText(language, "Income", "Revenu", "مدخول") else uiText(language, "Expense", "Dépense", "مصروف"), color = Muted); Text(FinanceAnalytics.dateString(item.createdAt).ifBlank { uiText(language, "Date unavailable", "Date indisponible", "التاريخ غير متوفر") }, color = Muted, fontSize = 11.sp) } }, trailingContent = { Row(verticalAlignment = Alignment.CenterVertically) { Text("${if(item.income) "+" else "-"}${item.amount} DH", color = if(item.income) Teal else ExpenseColor, fontWeight = FontWeight.Bold); IconButton(onClick = { val originalIndex = money.lastIndex - index; money = money.toMutableList().also { it.removeAt(originalIndex) }; saveMoney() }) { Icon(Icons.Default.Delete, uiText(language, "Delete", "Supprimer", "حذف"), tint = Muted) } } }, colors = ListItemDefaults.colors(containerColor = Panel)) } }
                     }
                     "Habits" -> {
                         Text(uiText(language, "DAILY HABITS", "HABITUDES QUOTIDIENNES", "العادات اليومية"), color = Muted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
@@ -755,7 +756,7 @@ fun DailySmartApp() {
                         Text(uiText(language, "SPREADSHEET TOOLS", "OUTILS TABLEUR", "أدوات الجداول"), color = Muted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         Text(uiText(language, "FINANCE SNAPSHOT", "APERÇU FINANCIER", "ملخص المالية"), color = Muted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            SummaryCard(uiText(language, "Income", "Revenu", "المدخول"), "${"%.0f".format(totalIncome)} DH", Modifier.weight(1f), Accent)
+                            SummaryCard(uiText(language, "Income", "Revenu", "المدخول"), "${"%.0f".format(totalIncome)} DH", Modifier.weight(1f), Teal)
                             SummaryCard(uiText(language, "Expenses", "Dépenses", "المصاريف"), "${"%.0f".format(totalExpense)} DH", Modifier.weight(1f), ExpenseColor)
                         }
                         Card(colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(14.dp)) {
