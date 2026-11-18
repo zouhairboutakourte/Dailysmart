@@ -100,6 +100,9 @@ fun DailySmartApp() {
     var command by remember { mutableStateOf("") }
     var newTitle by remember { mutableStateOf("") }
     var newAmount by remember { mutableStateOf("") }
+    var editingMoneyIndex by remember { mutableIntStateOf(-1) }
+    var editMoneyTitle by remember { mutableStateOf("") }
+    var editMoneyAmount by remember { mutableStateOf("") }
     var monthlyBudgetDraft by remember { mutableStateOf(prefs.getString("monthly_budget_mad", "") ?: "") }
     var monthlySavingsDraft by remember { mutableStateOf(prefs.getString("monthly_savings_goal_mad", "") ?: "") }
     var savedMonthlyBudget by remember { mutableStateOf(prefs.getString("monthly_budget_mad", null)?.toDoubleOrNull()?.takeIf { it.isFinite() && it > 0.0 }) }
@@ -236,6 +239,36 @@ fun DailySmartApp() {
 
     MaterialTheme(colorScheme = darkColorScheme(background = Navy, surface = Panel, primary = Accent, secondary = Teal, onBackground = White, onSurface = White)) {
       CompositionLocalProvider(LocalLayoutDirection provides if (language == "ar") LayoutDirection.Rtl else LayoutDirection.Ltr) {
+        if (editingMoneyIndex in money.indices) {
+            AlertDialog(
+                onDismissRequest = { editingMoneyIndex = -1 },
+                title = { Text(uiText(language, "Edit transaction", "Modifier l’opération", "تعديل العملية")) },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        OutlinedTextField(value = editMoneyTitle, onValueChange = { if (it.length <= 500) editMoneyTitle = it }, label = { Text(uiText(language, "Description", "Description", "الوصف")) }, singleLine = true)
+                        OutlinedTextField(value = editMoneyAmount, onValueChange = { editMoneyAmount = it }, label = { Text(uiText(language, "Amount in MAD", "Montant en MAD", "المبلغ بالدرهم")) }, singleLine = true)
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = {
+                        val amount = MoneyAmountParser.parse(editMoneyAmount)
+                        if (amount != null && editingMoneyIndex in money.indices) {
+                            val index = editingMoneyIndex
+                            money = money.toMutableList().also { list ->
+                                val current = list[index]
+                                list[index] = current.copy(title = editMoneyTitle.trim().ifBlank { current.title }, amount = amount)
+                            }
+                            saveMoney()
+                            editingMoneyIndex = -1
+                            info = uiText(language, "Transaction updated.", "Opération modifiée.", "تحدّثات العملية بنجاح.")
+                        } else {
+                            info = uiText(language, "Enter a valid amount greater than zero.", "Saisissez un montant valide supérieur à zéro.", "دخل مبلغ صحيح أكبر من صفر.")
+                        }
+                    }) { Text(uiText(language, "Save", "Enregistrer", "حفظ")) }
+                },
+                dismissButton = { TextButton(onClick = { editingMoneyIndex = -1 }) { Text(uiText(language, "Cancel", "Annuler", "إلغاء")) } }
+            )
+        }
         pendingAssistantAction?.let { action ->
         val actionTitle = when (action) {
             is AssistantAction.AddTask -> uiText(language, "Confirm new task", "Confirmer la tâche", "تأكيد المهمة الجديدة")
@@ -623,7 +656,7 @@ fun DailySmartApp() {
                             OutlinedButton(onClick = { val a = newAmount.replace(",", ".").toDoubleOrNull(); if (a != null && a.isFinite() && a > 0) { money = money + MoneyItem(newTitle.ifBlank { uiText(language, "Expense", "Dépense", "مصروف") }, a, false); saveMoney(); newTitle = ""; newAmount = "" } else { info = uiText(language, "Enter a valid amount greater than zero.", "Saisissez un montant valide supérieur à zéro.", "دخل مبلغ صحيح أكبر من صفر.") } }, modifier = Modifier.weight(1f)) { Text(uiText(language, "Add expense", "Ajouter une dépense", "إضافة مصروف")) }
                         }
                         if (money.isEmpty()) Text(uiText(language, "No transactions yet. Add your first income or expense.", "Aucune opération pour le moment.", "ما كايناش عمليات مالية دابا. زيد أول مدخول أو مصروف."), color = Muted, fontSize = 15.sp, modifier = Modifier.padding(vertical = 14.dp))
-                        LazyColumn(modifier = Modifier.weight(1f)) { itemsIndexed(money.reversed()) { index, item -> ListItem(headlineContent = { Text(item.title) }, supportingContent = { Column { Text(if(item.income) uiText(language, "Income", "Revenu", "مدخول") else uiText(language, "Expense", "Dépense", "مصروف"), color = Muted); Text(FinanceAnalytics.dateString(item.createdAt).ifBlank { uiText(language, "Date unavailable", "Date indisponible", "التاريخ غير متوفر") }, color = Muted, fontSize = 15.sp) } }, trailingContent = { Row(verticalAlignment = Alignment.CenterVertically) { Text("${if(item.income) "+" else "-"}${item.amount} DH", color = if(item.income) Teal else ExpenseColor, fontWeight = FontWeight.Bold); IconButton(onClick = { val originalIndex = money.lastIndex - index; money = money.toMutableList().also { it.removeAt(originalIndex) }; saveMoney() }) { Icon(Icons.Default.Delete, uiText(language, "Delete", "Supprimer", "حذف"), tint = Muted) } } }, colors = ListItemDefaults.colors(containerColor = Panel)) } }
+                        LazyColumn(modifier = Modifier.weight(1f)) { itemsIndexed(money.reversed()) { index, item -> ListItem(headlineContent = { Text(item.title) }, supportingContent = { Column { Text(if(item.income) uiText(language, "Income", "Revenu", "مدخول") else uiText(language, "Expense", "Dépense", "مصروف"), color = Muted); Text(FinanceAnalytics.dateString(item.createdAt).ifBlank { uiText(language, "Date unavailable", "Date indisponible", "التاريخ غير متوفر") }, color = Muted, fontSize = 15.sp) } }, trailingContent = { Row(verticalAlignment = Alignment.CenterVertically) { Text("${if(item.income) "+" else "-"}${item.amount} DH", color = if(item.income) Teal else ExpenseColor, fontWeight = FontWeight.Bold); IconButton(onClick = { val originalIndex = money.lastIndex - index; if (originalIndex in money.indices) { editMoneyTitle = money[originalIndex].title; editMoneyAmount = money[originalIndex].amount.toString(); editingMoneyIndex = originalIndex } }) { Icon(Icons.Default.Edit, uiText(language, "Edit", "Modifier", "تعديل"), tint = Accent) }; IconButton(onClick = { val originalIndex = money.lastIndex - index; money = money.toMutableList().also { if (originalIndex in it.indices) it.removeAt(originalIndex) }; saveMoney() }) { Icon(Icons.Default.Delete, uiText(language, "Delete", "Supprimer", "حذف"), tint = Muted) } } }, colors = ListItemDefaults.colors(containerColor = Panel)) } }
                     }
                     "Habits" -> {
                         Text(uiText(language, "DAILY HABITS", "HABITUDES QUOTIDIENNES", "العادات اليومية"), color = Muted, fontSize = 15.sp, fontWeight = FontWeight.Bold)
