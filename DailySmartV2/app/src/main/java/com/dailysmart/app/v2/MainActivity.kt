@@ -202,17 +202,18 @@ fun DailySmartApp() {
     val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         if (uri != null) runCatching {
             val csvText = context.contentResolver.openInputStream(uri)?.use { readBoundedText(it, 5 * 1024 * 1024, "CSV") } ?: throw IllegalStateException("Could not open CSV file.")
-            val rows = parseCsv(csvText).drop(1)
+            val parsedRows = parseCsv(csvText)
+            val firstRow = parsedRows.firstOrNull().orEmpty().map { it.trim().lowercase() }
+            val hasHeader = firstRow.any { it in listOf("type", "description", "amount", "date", "نوع", "النوع", "الوصف", "المبلغ") }
+            val rows = if (hasHeader) parsedRows.drop(1) else parsedRows
             val imported = rows.mapNotNull { p ->
                 if (p.size >= 3) {
                     val amount = MoneyAmountParser.parse(p[2]) ?: return@mapNotNull null
-                    if (!amount.isFinite() || amount <= 0.0) return@mapNotNull null
-                    run {
-                        val income = listOf("income", "revenu", "recette", "دخل").any { p[0].contains(it, true) }
-                        val description = p[1].trim().trim('"').ifBlank { if (income) "Income" else "Expense" }
-                        if (description.length > 500) return@mapNotNull null
-                        MoneyItem(description, amount, income, FinanceAnalytics.timestampFromDate(p.getOrNull(4).orEmpty()))
-                    }
+                    val type = p[0].trim()
+                    val income = listOf("income", "revenu", "recette", "salary", "salaire", "دخل", "راتب").any { type.contains(it, true) }
+                    val description = p[1].trim().trim('"').ifBlank { if (income) "Income" else "Expense" }
+                    if (description.length > 500) return@mapNotNull null
+                    MoneyItem(description, amount, income, FinanceAnalytics.timestampFromDate(p.getOrNull(4).orEmpty()))
                 } else null
             }
             money = money + imported
