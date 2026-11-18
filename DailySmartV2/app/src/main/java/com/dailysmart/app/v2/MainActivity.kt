@@ -202,7 +202,7 @@ fun DailySmartApp() {
             val rows = parseCsv(csvText).drop(1)
             val imported = rows.mapNotNull { p ->
                 if (p.size >= 3) {
-                    val amount = p[2].trim().toDoubleOrNull() ?: return@mapNotNull null
+                    val amount = MoneyAmountParser.parse(p[2]) ?: return@mapNotNull null
                     if (!amount.isFinite() || amount <= 0.0) return@mapNotNull null
                     run {
                         val income = listOf("income", "revenu", "recette", "دخل").any { p[0].contains(it, true) }
@@ -619,7 +619,7 @@ fun DailySmartApp() {
                         OutlinedTextField(value = newTitle, onValueChange = { if (it.length <= 500) newTitle = it }, modifier = Modifier.fillMaxWidth(), placeholder = { Text(uiText(language, "Description", "Description", "الوصف")) }, singleLine = true)
                         OutlinedTextField(value = newAmount, onValueChange = { newAmount = it }, modifier = Modifier.fillMaxWidth(), placeholder = { Text(uiText(language, "Amount in MAD", "Montant en MAD", "المبلغ بالدرهم")) }, singleLine = true)
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Button(onClick = { val a = newAmount.replace(",", ".").toDoubleOrNull(); if (a != null && a.isFinite() && a > 0) { money = money + MoneyItem(newTitle.ifBlank { uiText(language, "Income", "Revenu", "مدخول") }, a, true); saveMoney(); newTitle = ""; newAmount = "" } else { info = uiText(language, "Enter a valid amount greater than zero.", "Saisissez un montant valide supérieur à zéro.", "دخل مبلغ صحيح أكبر من صفر.") } }, modifier = Modifier.weight(1f)) { Text(uiText(language, "Add income", "Ajouter un revenu", "إضافة مدخول")) }
+                            Button(onClick = { val a = MoneyAmountParser.parse(newAmount); if (a != null) { money = money + MoneyItem(newTitle.ifBlank { uiText(language, "Income", "Revenu", "مدخول") }, a, true); saveMoney(); newTitle = ""; newAmount = "" } else { info = uiText(language, "Enter a valid amount greater than zero.", "Saisissez un montant valide supérieur à zéro.", "دخل مبلغ صحيح أكبر من صفر.") } }, modifier = Modifier.weight(1f)) { Text(uiText(language, "Add income", "Ajouter un revenu", "إضافة مدخول")) }
                             OutlinedButton(onClick = { val a = newAmount.replace(",", ".").toDoubleOrNull(); if (a != null && a.isFinite() && a > 0) { money = money + MoneyItem(newTitle.ifBlank { uiText(language, "Expense", "Dépense", "مصروف") }, a, false); saveMoney(); newTitle = ""; newAmount = "" } else { info = uiText(language, "Enter a valid amount greater than zero.", "Saisissez un montant valide supérieur à zéro.", "دخل مبلغ صحيح أكبر من صفر.") } }, modifier = Modifier.weight(1f)) { Text(uiText(language, "Add expense", "Ajouter une dépense", "إضافة مصروف")) }
                         }
                         if (money.isEmpty()) Text(uiText(language, "No transactions yet. Add your first income or expense.", "Aucune opération pour le moment.", "ما كايناش عمليات مالية دابا. زيد أول مدخول أو مصروف."), color = Muted, fontSize = 15.sp, modifier = Modifier.padding(vertical = 14.dp))
