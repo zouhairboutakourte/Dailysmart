@@ -84,7 +84,7 @@ object ExcelWorkbook {
                     append("<row r=\""+(ri+1)+"\">")
                     row.forEachIndexed { ci,v ->
                         append(when {
-                            v.startsWith("=") -> formulaCell(ci, ri+1, v.drop(1))
+                            v.startsWith("\u0001=") -> formulaCell(ci, ri+1, v.drop(2))
                             v.toDoubleOrNull() != null -> numberCell(ci, ri+1, v)
                             else -> cell(ci, ri+1, v)
                         })
@@ -99,7 +99,7 @@ object ExcelWorkbook {
             val income=items.filter{it.income}.sumOf{it.amount}; val expense=items.filterNot{it.income}.sumOf{it.amount}
             val cats=items.filterNot{it.income}.groupBy{FinanceAnalytics.categoryFor(it.title)}.mapValues{it.value.sumOf{m->m.amount}}.toList().sortedByDescending{it.second}
             val lastFinanceRow=(items.size+1).coerceAtLeast(2)
-            val dash=mutableListOf(listOf("DailySmart Dashboard"),listOf("Generated",java.time.LocalDate.now().toString()),listOf("Income MAD","=SUMIF(Finance!\$A\$2:\$A\$"+lastFinanceRow+",\"Income\",Finance!\$C\$2:\$C\$"+lastFinanceRow+")"),listOf("Expenses MAD","=SUMIF(Finance!\$A\$2:\$A\$"+lastFinanceRow+",\"Expense\",Finance!\$C\$2:\$C\$"+lastFinanceRow+")"),listOf("Net balance MAD","=B3-B4"),listOf("Transactions",items.size.toString()),listOf("Top category",cats.firstOrNull()?.first?:"—"),listOf("Category","Expenses MAD","Visual bar"))
+            val dash=mutableListOf(listOf("DailySmart Dashboard"),listOf("Generated",java.time.LocalDate.now().toString()),listOf("Income MAD","\u0001=SUMIF(Finance!\$A\$2:\$A\$"+lastFinanceRow+",\"Income\",Finance!\$C\$2:\$C\$"+lastFinanceRow+")"),listOf("Expenses MAD","=SUMIF(Finance!\$A\$2:\$A\$"+lastFinanceRow+",\"Expense\",Finance!\$C\$2:\$C\$"+lastFinanceRow+")"),listOf("Net balance MAD","\u0001=B3-B4"),listOf("Transactions",items.size.toString()),listOf("Top category",cats.firstOrNull()?.first?:"—"),listOf("Category","Expenses MAD","Visual bar"))
             val maxCategory=cats.maxOfOrNull{it.second}?:0.0; cats.forEach{p->dash+=listOf(p.first,p.second.toString(),"█".repeat(if(maxCategory>0)(p.second/maxCategory*20).toInt().coerceAtLeast(1) else 0))}
             sheets+=makeSheet("Dashboard",dash)
             sheets+=makeSheet("Finance",listOf(listOf("Type","Description","Amount MAD","Date","Category"))+items.map{listOf(if(it.income)"Income" else "Expense",it.title,it.amount.toString(),FinanceAnalytics.dateString(it.createdAt),if(it.income)"Income" else FinanceAnalytics.categoryFor(it.title))})
