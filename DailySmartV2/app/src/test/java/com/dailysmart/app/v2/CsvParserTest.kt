@@ -37,8 +37,8 @@ class CsvParserTest {
     @Test
     fun parsesSemicolonDelimitedFrenchCsvAndCommaDecimals() {
         val rows = parseCsv(
-            "type;description;amount;currency\\n" +
-                "expense;Courses;12,50;MAD\\n" +
+            "type;description;amount;currency\n" +
+                "expense;Courses;12,50;MAD\n" +
                 "income;Salaire;8 500;MAD"
         )
         assertEquals(3, rows.size)
