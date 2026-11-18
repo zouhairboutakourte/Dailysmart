@@ -8,6 +8,14 @@ on:
       - 'DailySmartV2/settings.gradle.kts'
       - 'DailySmartV2/gradle.properties'
       - '.github/workflows/build-dailysmart-v2.yml'
+  pull_request:
+    branches: [dev]
+    paths:
+      - 'DailySmartV2/app/**'
+      - 'DailySmartV2/build.gradle.kts'
+      - 'DailySmartV2/settings.gradle.kts'
+      - 'DailySmartV2/gradle.properties'
+      - '.github/workflows/build-dailysmart-v2.yml'
   workflow_dispatch:
 concurrency:
   group: dailysmart-dev-build
