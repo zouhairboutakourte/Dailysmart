@@ -11,14 +11,14 @@ class ExcelWorkbookTest {
     fun userTextStartingWithEqualsIsExportedAsTextNotFormula() {
         val untrustedText = """=HYPERLINK("https://example.com","Open")"""
         val bytes = ExcelWorkbook.exportWorkspace(
-            items = listOf(MoneyItem(untrustedText, 10.0, false)),
+            items = listOf(MoneyItem(untrustedText, 10.0, false, System.currentTimeMillis())),
             tasks = listOf(TaskItem(untrustedText)),
             habits = listOf(HabitItem(untrustedText)),
             scope = "all",
             language = "en"
         )
 
-        val worksheetXml = mutableListOf<String>()
+        val worksheetXml = mutableListOf<String>()\n        val chartEntries = mutableListOf<String>()
         ZipInputStream(ByteArrayInputStream(bytes)).use { zip ->
             while (true) {
                 val entry = zip.nextEntry ?: break
