@@ -64,7 +64,7 @@ object MoneyAmountParser {
                     ch.isDigit() -> append(ch)
                     ch == decimalSeparator -> append('.')
                     ch == groupingSeparator || ch == ',' || ch == '.' -> Unit
-                    else -> return null
+                    else -> Unit
                 }
             }
         }
