@@ -74,7 +74,7 @@ object AssistantEngine {
                     .replace(Regex("""(?i)(?<=\d)(?:dhs|dh|mad)\b|\b(?:dhs|dh|mad|dirham|dirhams)\b|€|درهم|دراهم"""), " ")
                     .replace(Regex("\\s+"), " ")
                     .trim()
-                val amountMatch = Regex("""(?:^|\\s)(\\d{1,3}(?:[ ,.]\\d{3})+(?:[.,]\\d{1,2})?|\\d+(?:[.,]\\d{1,2})?)(?=\\s|$)""").find(rest)
+                val amountMatch = Regex("""(?:^|\s)(\d{1,3}(?:[ ,.]\d{3})+(?:[.,]\d{1,2})?|\d+(?:[.,]\d{1,2})?)(?=\s|$)""").find(rest)
                     ?: return AssistantAction.Help
                 val amount = MoneyAmountParser.parse(amountMatch.groupValues[1])
                     ?: return AssistantAction.Help
