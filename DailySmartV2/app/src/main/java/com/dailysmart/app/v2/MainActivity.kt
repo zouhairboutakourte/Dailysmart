@@ -276,19 +276,51 @@ fun DailySmartApp() {
     }
 
     val xlsxExportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")) { uri ->
-        if (uri != null) runCatching {
-            context.contentResolver.openOutputStream(uri)?.use { it.write(ExcelWorkbook.exportWorkspace(money, tasks, habits, reportScope, language)) }
-            info = uiText(language, "Excel workbook exported successfully.", "Classeur Excel exporté avec succès.", "تم تصدير ملف Excel بنجاح.")
-        }.onFailure { info = uiText(language, "Excel export failed. Please try again.", "Échec de l’export Excel. Réessayez.", "فشل تصدير Excel. حاول مرة أخرى.") }
+        if (uri != null) {
+            val moneySnapshot = money.toList()
+            val tasksSnapshot = tasks.toList()
+            val habitsSnapshot = habits.toList()
+            val scopeSnapshot = reportScope
+            val languageSnapshot = language
+            info = uiText(language, "Preparing Excel workbook…", "Préparation du classeur Excel…", "جاري إعداد ملف Excel…")
+            scope.launch {
+                runCatching {
+                    val bytes = withContext(Dispatchers.Default) {
+                        ExcelWorkbook.exportWorkspace(moneySnapshot, tasksSnapshot, habitsSnapshot, scopeSnapshot, languageSnapshot)
+                    }
+                    withContext(Dispatchers.IO) {
+                        context.contentResolver.openOutputStream(uri)?.use { it.write(bytes) }
+                            ?: throw IllegalStateException("Could not create Excel file.")
+                    }
+                }.onSuccess {
+                    info = uiText(languageSnapshot, "Excel workbook exported successfully.", "Classeur Excel exporté avec succès.", "تم تصدير ملف Excel بنجاح.")
+                }.onFailure {
+                    info = uiText(languageSnapshot, "Excel export failed. Please try again.", "Échec de l’export Excel. Réessayez.", "فشل تصدير Excel. حاول مرة أخرى.")
+                }
+            }
+        }
     }
     val xlsxImportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
-        if (uri != null) runCatching {
-            val bytes = context.contentResolver.openInputStream(uri)!!.use { ExcelWorkbook.readBounded(it) }
-            val imported = ExcelWorkbook.importFinance(bytes)
-            money = money + imported
-            saveMoney()
-            info = uiText(language, "${imported.size} Excel rows imported.", "${imported.size} lignes Excel importées.", "تم استيراد ${imported.size} سطر من Excel.")
-        }.onFailure { info = uiText(language, "Could not import this workbook. Check that it is a DailySmart finance file.", "Impossible d’importer ce classeur. Vérifiez qu’il s’agit d’un fichier financier DailySmart.", "تعذر استيراد الملف. تأكد أنه ملف مالي بصيغة DailySmart.") }
+        if (uri != null) {
+            val languageSnapshot = language
+            info = uiText(language, "Reading Excel workbook…", "Lecture du classeur Excel…", "جاري قراءة ملف Excel…")
+            scope.launch {
+                runCatching {
+                    val imported = withContext(Dispatchers.IO) {
+                        val bytes = context.contentResolver.openInputStream(uri)?.use { ExcelWorkbook.readBounded(it) }
+                            ?: throw IllegalStateException("Could not open Excel file.")
+                        withContext(Dispatchers.Default) { ExcelWorkbook.importFinance(bytes) }
+                    }
+                    imported
+                }.onSuccess { imported ->
+                    money = money + imported
+                    saveMoney()
+                    info = uiText(languageSnapshot, "${imported.size} Excel rows imported.", "${imported.size} lignes Excel importées.", "تم استيراد ${imported.size} سطر من Excel.")
+                }.onFailure {
+                    info = uiText(languageSnapshot, "Could not import this workbook. Check that it is a DailySmart finance file.", "Impossible d’importer ce classeur. Vérifiez qu’il s’agit d’un fichier financier DailySmart.", "تعذر استيراد الملف. تأكد أنه ملف مالي بصيغة DailySmart.")
+                }
+            }
+        }
     }
 
     MaterialTheme(colorScheme = darkColorScheme(background = Navy, surface = Panel, primary = Accent, secondary = Teal, onBackground = White, onSurface = White)) {
