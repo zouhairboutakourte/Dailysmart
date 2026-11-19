@@ -73,6 +73,8 @@ data class TaskItem(val title: String, val done: Boolean = false, val stableId: 
 data class MoneyItem(val title: String, val amount: Double, val income: Boolean, val createdAt: Long = System.currentTimeMillis(), val stableId: String = java.util.UUID.randomUUID().toString())
 data class HabitItem(val title: String, val completedToday: Boolean = false, val stableId: String = java.util.UUID.randomUUID().toString())
 
+private data class InitialWorkspace(val tasks: List<TaskItem>, val money: List<MoneyItem>, val habits: List<HabitItem>)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DailySmartApp() {
@@ -85,14 +87,8 @@ fun DailySmartApp() {
     val geminiConfigured = remember { GeminiAssistant.initialize(context) }
     var geminiLoading by remember { mutableStateOf(false) }
     val prefs = remember { context.getSharedPreferences("dailysmart_v2", Context.MODE_PRIVATE) }
-    val database = remember {
-        LocalDatabase(context).also { db ->
-            db.migrateLegacyOnce(
-                loadTasks(prefs), loadMoney(prefs), loadHabits(prefs),
-                prefs.getString("habits_date", "") ?: ""
-            )
-        }
-    }
+    var language by remember { mutableStateOf(prefs.getString("language", "ar") ?: "ar") }
+    val database = remember { LocalDatabase(context) }
     DisposableEffect(database, databaseScope) {
         onDispose {
             databaseScope.launch {
@@ -101,12 +97,42 @@ fun DailySmartApp() {
             }
         }
     }
-    var tasks by remember { mutableStateOf(database.loadTasks()) }
-    var money by remember { mutableStateOf(database.loadMoney()) }
-    var habits by remember { mutableStateOf(database.loadHabitsForToday(todayKey())) }
+    // Database migration and first read happen on the serialized IO dispatcher, never on the first UI frame.
+    val initialWorkspace by produceState<InitialWorkspace?>(initialValue = null, database) {
+        value = withContext(databaseDispatcher) {
+            database.migrateLegacyOnce(
+                loadTasks(prefs), loadMoney(prefs), loadHabits(prefs),
+                prefs.getString("habits_date", "") ?: ""
+            )
+            InitialWorkspace(
+                database.loadTasks(),
+                database.loadMoney(),
+                database.loadHabitsForToday(todayKey())
+            )
+        }
+    }
+    if (initialWorkspace == null) {
+        Box(
+            modifier = Modifier.fillMaxSize().background(Navy),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                CircularProgressIndicator(color = Accent)
+                Text(
+                    uiText(language, "Loading your workspace…", "Chargement de votre espace…", "جاري تحميل مساحة العمل…"),
+                    color = White,
+                    fontSize = 14.sp
+                )
+            }
+        }
+        return
+    }
+    val loadedWorkspace = initialWorkspace!!
+    var tasks by remember(loadedWorkspace) { mutableStateOf(loadedWorkspace.tasks) }
+    var money by remember(loadedWorkspace) { mutableStateOf(loadedWorkspace.money) }
+    var habits by remember(loadedWorkspace) { mutableStateOf(loadedWorkspace.habits) }
     var newHabit by remember { mutableStateOf("") }
     var tab by remember { mutableStateOf("Assistant") }
-    var language by remember { mutableStateOf(prefs.getString("language", "ar") ?: "ar") }
     fun changeLanguage(code: String) {
         language = code
         prefs.edit().putString("language", code).apply()
