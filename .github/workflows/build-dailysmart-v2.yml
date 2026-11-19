@@ -1,7 +1,7 @@
 name: Build DailySmart V2 Native
 on:
   push:
-    branches: [dev]
+    branches: [dev, 'fix/finance-safety-phase-1']
     paths:
       - 'DailySmartV2/app/**'
       - 'DailySmartV2/build.gradle.kts'
