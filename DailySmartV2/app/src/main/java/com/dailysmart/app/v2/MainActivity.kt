@@ -769,7 +769,7 @@ fun DailySmartApp() {
                                 }
                                 Divider(color = Muted.copy(alpha = 0.25f))
                                 Text("DailySmart V2", color = White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                                Text(uiText(language, "Version 2.12.0 · Android app", "Version 2.12.0 · Application Android", "الإصدار 2.12.0 · تطبيق أندرويد"), color = Muted, fontSize = 15.sp)
+                                Text(uiText(language, "Version 2.13.0 · Android app", "Version 2.13.0 · Application Android", "الإصدار 2.13.0 · تطبيق أندرويد"), color = Muted, fontSize = 15.sp)
                                 Divider(color = Muted.copy(alpha = 0.25f))
                                 Text(uiText(language, "Currency", "Devise", "العملة"), color = Muted, fontSize = 15.sp)
                                 Text(uiText(language, "Moroccan dirham (MAD)", "Dirham marocain (MAD)", "الدرهم المغربي (MAD)"), color = White)
@@ -813,7 +813,7 @@ fun DailySmartApp() {
                             Column(Modifier.padding(16.dp)) {
                                 Icon(Icons.Default.TableChart, null, tint = Accent, modifier = Modifier.size(30.dp))
                                 Text(uiText(language, "Excel companion", "Compagnon Excel", "مساعد Excel"), fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                                Text(uiText(language, "Import and export .xlsx finance workbooks, or use CSV for simple data exchange. This version handles transaction type, description and amount; it does not edit arbitrary workbook formulas or charts.", "Importez et exportez des fichiers financiers .xlsx ou CSV. Cette version gère le type, la description et le montant, mais pas les formules ni les graphiques avancés.", "استورد وصدّر ملفات Excel أو CSV المالية. النسخة الحالية تدعم نوع العملية والوصف والمبلغ، ولا تعدل الصيغ والرسوم البيانية المتقدمة."), color = Muted, fontSize = 15.sp)
+                                Text(uiText(language, "Export a multi-sheet .xlsx workspace with a formula-driven dashboard and category/monthly charts when data is available. Import supports DailySmart finance workbooks; arbitrary Excel templates and formulas are not edited.", "Importez et exportez des fichiers financiers .xlsx ou CSV. Cette version gère le type, la description et le montant, mais pas les formules ni les graphiques avancés.", "استورد وصدّر ملفات Excel أو CSV المالية. النسخة الحالية تدعم نوع العملية والوصف والمبلغ، ولا تعدل الصيغ والرسوم البيانية المتقدمة."), color = Muted, fontSize = 15.sp)
                                 Spacer(Modifier.height(14.dp))
                                 Button(onClick = { exportLauncher.launch("dailysmart-finance.csv") }, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Default.FileDownload, null); Spacer(Modifier.width(8.dp)); Text(uiText(language, "Export finance to CSV", "Exporter en CSV", "تصدير CSV")) }
                                 OutlinedButton(onClick = { importLauncher.launch("text/*") }, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Default.FileUpload, null); Spacer(Modifier.width(8.dp)); Text(uiText(language, "Import finance CSV", "Importer CSV", "استيراد CSV")) }
