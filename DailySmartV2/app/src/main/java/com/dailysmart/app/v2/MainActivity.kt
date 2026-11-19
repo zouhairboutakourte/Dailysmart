@@ -254,7 +254,7 @@ fun DailySmartApp() {
                         buildString {
                             appendLine("type,description,amount,currency,date")
                             snapshot.forEach { item ->
-                                val escapedTitle = item.title.replace("\\\"", "\\\"\\\"")
+                                val escapedTitle = item.title.replace("\"", "\"\"")
                                 appendLine("${if (item.income) "income" else "expense"},\"${escapedTitle}\",${item.amount},MAD,${FinanceAnalytics.dateString(item.createdAt)}")
                             }
                         }
