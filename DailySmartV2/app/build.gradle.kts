@@ -4,10 +4,18 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
 }
 
-// Firebase config is added after the Firebase project is created.
+// Firebase config is supplied locally or by the protected CI secret.
 if (file("google-services.json").exists()) {
     apply(plugin = "com.google.gms.google-services")
 }
+
+val signingStoreFile = System.getenv("ANDROID_KEYSTORE_FILE")
+val signingStorePassword = System.getenv("ANDROID_KEYSTORE_PASSWORD")
+val signingKeyAlias = System.getenv("ANDROID_KEY_ALIAS")
+val signingKeyPassword = System.getenv("ANDROID_KEY_PASSWORD")
+val releaseSigningReady = listOf(
+    signingStoreFile, signingStorePassword, signingKeyAlias, signingKeyPassword
+).all { !it.isNullOrBlank() }
 android {
     namespace = "com.dailysmart.app.v2"
     compileSdk = 35
@@ -21,6 +29,24 @@ android {
     buildFeatures {
         compose = true
         buildConfig = true
+    }
+    signingConfigs {
+        create("release") {
+            if (releaseSigningReady) {
+                storeFile = file(signingStoreFile!!)
+                storePassword = signingStorePassword
+                keyAlias = signingKeyAlias
+                keyPassword = signingKeyPassword
+            }
+        }
+    }
+    buildTypes {
+        getByName("release") {
+            isMinifyEnabled = false
+            if (releaseSigningReady) {
+                signingConfig = signingConfigs.getByName("release")
+            }
+        }
     }
     testOptions { unitTests.isIncludeAndroidResources = true }
     compileOptions {
@@ -38,7 +64,7 @@ dependencies {
     implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
-    implementation(platform("com.google.firebase:firebase-bom:35.1.0"))
+    implementation(platform("com.google.firebase:firebase-bom:35.2.0"))
     implementation("com.google.firebase:firebase-ai")
     debugImplementation("com.google.firebase:firebase-appcheck-debug")
     implementation("com.google.firebase:firebase-appcheck-playintegrity")
