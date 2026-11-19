@@ -15,7 +15,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -100,7 +100,7 @@ fun DailySmartApp() {
     var command by remember { mutableStateOf("") }
     var newTitle by remember { mutableStateOf("") }
     var newAmount by remember { mutableStateOf("") }
-    var editingMoneyIndex by remember { mutableIntStateOf(-1) }
+    var editingMoneyId by remember { mutableStateOf<String?>(null) }
     var editMoneyTitle by remember { mutableStateOf("") }
     var editMoneyAmount by remember { mutableStateOf("") }
     var monthlyBudgetDraft by remember { mutableStateOf(prefs.getString("monthly_budget_mad", "") ?: "") }
@@ -240,9 +240,10 @@ fun DailySmartApp() {
 
     MaterialTheme(colorScheme = darkColorScheme(background = Navy, surface = Panel, primary = Accent, secondary = Teal, onBackground = White, onSurface = White)) {
       CompositionLocalProvider(LocalLayoutDirection provides if (language == "ar") LayoutDirection.Rtl else LayoutDirection.Ltr) {
-        if (editingMoneyIndex in money.indices) {
+        val editingMoneyItem = money.firstOrNull { it.stableId == editingMoneyId }
+        if (editingMoneyItem != null) {
             AlertDialog(
-                onDismissRequest = { editingMoneyIndex = -1 },
+                onDismissRequest = { editingMoneyId = null },
                 title = { Text(uiText(language, "Edit transaction", "Modifier l’opération", "تعديل العملية")) },
                 text = {
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -253,21 +254,22 @@ fun DailySmartApp() {
                 confirmButton = {
                     TextButton(onClick = {
                         val amount = MoneyAmountParser.parse(editMoneyAmount)
-                        if (amount != null && editingMoneyIndex in money.indices) {
-                            val index = editingMoneyIndex
+                        val targetId = editingMoneyId
+                        val targetIndex = money.indexOfFirst { it.stableId == targetId }
+                        if (amount != null && targetIndex >= 0) {
                             money = money.toMutableList().also { list ->
-                                val current = list[index]
-                                list[index] = current.copy(title = editMoneyTitle.trim().ifBlank { current.title }, amount = amount)
+                                val current = list[targetIndex]
+                                list[targetIndex] = current.copy(title = editMoneyTitle.trim().ifBlank { current.title }, amount = amount)
                             }
                             saveMoney()
-                            editingMoneyIndex = -1
+                            editingMoneyId = null
                             info = uiText(language, "Transaction updated.", "Opération modifiée.", "تحدّثات العملية بنجاح.")
                         } else {
                             info = uiText(language, "Enter a valid amount greater than zero.", "Saisissez un montant valide supérieur à zéro.", "دخل مبلغ صحيح أكبر من صفر.")
                         }
                     }) { Text(uiText(language, "Save", "Enregistrer", "حفظ")) }
                 },
-                dismissButton = { TextButton(onClick = { editingMoneyIndex = -1 }) { Text(uiText(language, "Cancel", "Annuler", "إلغاء")) } }
+                dismissButton = { TextButton(onClick = { editingMoneyId = null }) { Text(uiText(language, "Cancel", "Annuler", "إلغاء")) } }
             )
         }
         pendingAssistantAction?.let { action ->
@@ -530,12 +532,15 @@ fun DailySmartApp() {
                         Spacer(Modifier.height(8.dp))
                         if (tasks.isEmpty()) Text(uiText(language, "No tasks yet. Add one above to get started.", "Aucune tâche pour le moment. Ajoutez-en une ci-dessus.", "ما كايناش مهام دابا. زيد أول مهمة من الفوق."), color = Muted, fontSize = 15.sp, modifier = Modifier.padding(vertical = 14.dp))
                         LazyColumn(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            itemsIndexed(tasks) { i, item ->
+                            items(tasks, key = { it.stableId }) { item ->
                                 Card(colors = CardDefaults.cardColors(containerColor = Panel)) {
-                                    Row(Modifier.fillMaxWidth().clickable { tasks = tasks.toMutableList().also { it[i] = item.copy(done = !item.done) }; saveTasks() }.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    Row(Modifier.fillMaxWidth().clickable {
+                                        tasks = tasks.map { current -> if (current.stableId == item.stableId) current.copy(done = !current.done) else current }
+                                        saveTasks()
+                                    }.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
                                         Icon(if (item.done) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked, null, tint = if (item.done) Accent else Muted)
                                         Spacer(Modifier.width(10.dp)); Text(item.title, modifier = Modifier.weight(1f), color = if (item.done) Muted else White)
-                                        IconButton(onClick = { tasks = tasks.toMutableList().also { it.removeAt(i) }; saveTasks() }) { Icon(Icons.Default.Delete, null, tint = Muted) }
+                                        IconButton(onClick = { tasks = tasks.filterNot { it.stableId == item.stableId }; saveTasks() }) { Icon(Icons.Default.Delete, null, tint = Muted) }
                                     }
                                 }
                             }
@@ -657,7 +662,33 @@ fun DailySmartApp() {
                             OutlinedButton(onClick = { val a = newAmount.replace(",", ".").toDoubleOrNull(); if (a != null && a.isFinite() && a > 0) { money = money + MoneyItem(newTitle.ifBlank { uiText(language, "Expense", "Dépense", "مصروف") }, a, false); saveMoney(); newTitle = ""; newAmount = "" } else { info = uiText(language, "Enter a valid amount greater than zero.", "Saisissez un montant valide supérieur à zéro.", "دخل مبلغ صحيح أكبر من صفر.") } }, modifier = Modifier.weight(1f)) { Text(uiText(language, "Add expense", "Ajouter une dépense", "إضافة مصروف")) }
                         }
                         if (money.isEmpty()) Text(uiText(language, "No transactions yet. Add your first income or expense.", "Aucune opération pour le moment.", "ما كايناش عمليات مالية دابا. زيد أول مدخول أو مصروف."), color = Muted, fontSize = 15.sp, modifier = Modifier.padding(vertical = 14.dp))
-                        LazyColumn(modifier = Modifier.weight(1f)) { itemsIndexed(money.reversed()) { index, item -> ListItem(headlineContent = { Text(item.title) }, supportingContent = { Column { Text(if(item.income) uiText(language, "Income", "Revenu", "مدخول") else uiText(language, "Expense", "Dépense", "مصروف"), color = Muted); Text(FinanceAnalytics.dateString(item.createdAt).ifBlank { uiText(language, "Date unavailable", "Date indisponible", "التاريخ غير متوفر") }, color = Muted, fontSize = 15.sp) } }, trailingContent = { Row(verticalAlignment = Alignment.CenterVertically) { Text("${if(item.income) "+" else "-"}${item.amount} DH", color = if(item.income) Teal else ExpenseColor, fontWeight = FontWeight.Bold); IconButton(onClick = { val originalIndex = money.lastIndex - index; if (originalIndex in money.indices) { editMoneyTitle = money[originalIndex].title; editMoneyAmount = money[originalIndex].amount.toString(); editingMoneyIndex = originalIndex } }) { Icon(Icons.Default.Edit, uiText(language, "Edit", "Modifier", "تعديل"), tint = Accent) }; IconButton(onClick = { val originalIndex = money.lastIndex - index; money = money.toMutableList().also { if (originalIndex in it.indices) it.removeAt(originalIndex) }; saveMoney() }) { Icon(Icons.Default.Delete, uiText(language, "Delete", "Supprimer", "حذف"), tint = Muted) } } }, colors = ListItemDefaults.colors(containerColor = Panel)) } }
+                        LazyColumn(modifier = Modifier.weight(1f)) {
+                            items(money.reversed(), key = { it.stableId }) { item ->
+                                ListItem(
+                                    headlineContent = { Text(item.title) },
+                                    supportingContent = {
+                                        Column {
+                                            Text(if(item.income) uiText(language, "Income", "Revenu", "مدخول") else uiText(language, "Expense", "Dépense", "مصروف"), color = Muted)
+                                            Text(FinanceAnalytics.dateString(item.createdAt).ifBlank { uiText(language, "Date unavailable", "Date indisponible", "التاريخ غير متوفر") }, color = Muted, fontSize = 15.sp)
+                                        }
+                                    },
+                                    trailingContent = {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Text("${if(item.income) "+" else "-"}${item.amount} DH", color = if(item.income) Teal else ExpenseColor, fontWeight = FontWeight.Bold)
+                                            IconButton(onClick = {
+                                                editingMoneyId = item.stableId
+                                                editMoneyTitle = item.title
+                                                editMoneyAmount = item.amount.toString()
+                                            }) { Icon(Icons.Default.Edit, uiText(language, "Edit", "Modifier", "تعديل"), tint = Accent) }
+                                            IconButton(onClick = { money = money.filterNot { it.stableId == item.stableId }; saveMoney() }) {
+                                                Icon(Icons.Default.Delete, uiText(language, "Delete", "Supprimer", "حذف"), tint = Muted)
+                                            }
+                                        }
+                                    },
+                                    colors = ListItemDefaults.colors(containerColor = Panel)
+                                )
+                            }
+                        }
                     }
                     "Habits" -> {
                         Text(uiText(language, "DAILY HABITS", "HABITUDES QUOTIDIENNES", "العادات اليومية"), color = Muted, fontSize = 15.sp, fontWeight = FontWeight.Bold)
@@ -673,13 +704,16 @@ fun DailySmartApp() {
                         Button(onClick = { if (newHabit.isNotBlank()) { habits = habits + HabitItem(newHabit.trim()); saveHabits(); newHabit = "" } }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(14.dp)) { Icon(Icons.Default.Add, null); Spacer(Modifier.width(7.dp)); Text(uiText(language, "Add habit", "Ajouter une habitude", "إضافة عادة")) }
                         if (habits.isEmpty()) Text(uiText(language, "No habits yet. Add one small daily habit.", "Aucune habitude pour le moment.", "ما كايناش عادات دابا. زيد عادة صغيرة كل نهار."), color = Muted, fontSize = 15.sp, modifier = Modifier.padding(vertical = 14.dp))
                         LazyColumn(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            itemsIndexed(habits) { i, habit ->
+                            items(habits, key = { it.stableId }) { habit ->
                                 Card(colors = CardDefaults.cardColors(containerColor = Panel)) {
-                                    Row(Modifier.fillMaxWidth().clickable { habits = habits.toMutableList().also { it[i] = habit.copy(completedToday = !habit.completedToday) }; saveHabits() }.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    Row(Modifier.fillMaxWidth().clickable {
+                                        habits = habits.map { current -> if (current.stableId == habit.stableId) current.copy(completedToday = !current.completedToday) else current }
+                                        saveHabits()
+                                    }.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
                                         Icon(if (habit.completedToday) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked, null, tint = if (habit.completedToday) Accent else Muted)
                                         Spacer(Modifier.width(10.dp))
                                         Text(habit.title, modifier = Modifier.weight(1f), color = if (habit.completedToday) Muted else White)
-                                        IconButton(onClick = { habits = habits.toMutableList().also { it.removeAt(i) }; saveHabits() }) { Icon(Icons.Default.Delete, null, tint = Muted) }
+                                        IconButton(onClick = { habits = habits.filterNot { it.stableId == habit.stableId }; saveHabits() }) { Icon(Icons.Default.Delete, null, tint = Muted) }
                                     }
                                 }
                             }
