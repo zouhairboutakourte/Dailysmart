@@ -1,6 +1,14 @@
 name: Build DailySmart V2 Native
 on:
   push:
+    branches: [dev, 'fix/finance-safety-phase-1']
+    paths:
+      - 'DailySmartV2/app/**'
+      - 'DailySmartV2/build.gradle.kts'
+      - 'DailySmartV2/settings.gradle.kts'
+      - 'DailySmartV2/gradle.properties'
+      - '.github/workflows/build-dailysmart-v2.yml'
+  pull_request:
     branches: [dev]
     paths:
       - 'DailySmartV2/app/**'
@@ -9,8 +17,14 @@ on:
       - 'DailySmartV2/gradle.properties'
       - '.github/workflows/build-dailysmart-v2.yml'
   workflow_dispatch:
+    inputs:
+      release:
+        description: 'Build signed release APK and Play Store AAB (requires configured Firebase and signing secrets)'
+        required: false
+        default: false
+        type: boolean
 concurrency:
-  group: dailysmart-dev-build
+  group: dailysmart-v2-${{ github.ref }}
   cancel-in-progress: true
 permissions:
   contents: read
@@ -18,7 +32,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout dev
+      - name: Checkout selected commit
         uses: actions/checkout@v4
         with:
           ref: ${{ github.sha }}
@@ -35,17 +49,78 @@ jobs:
         uses: android-actions/setup-android@v3
         with:
           packages: platform-tools platforms;android-35 build-tools;35.0.0
-      - name: Build standalone V2 APK
+      - name: Configure Firebase Android app when credentials are available
+        working-directory: DailySmartV2
+        env:
+          FIREBASE_CONFIG_BASE64: ${{ secrets.FIREBASE_GOOGLE_SERVICES_JSON_BASE64 }}
+        run: |
+          if [ -n "$FIREBASE_CONFIG_BASE64" ]; then
+            printf '%s' "$FIREBASE_CONFIG_BASE64" | base64 --decode > app/google-services.json
+            test -s app/google-services.json
+          else
+            echo "Firebase config not supplied; Gemini remains disabled in this build."
+          fi
+      - name: Build and test debug APK
         working-directory: DailySmartV2
         run: gradle :app:testDebugUnitTest :app:assembleDebug --stacktrace
-      - name: Verify package and APK
+      - name: Verify debug package and APK
         working-directory: DailySmartV2
         run: |
           test -s app/build/outputs/apk/debug/app-debug.apk
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging app/build/outputs/apk/debug/app-debug.apk | grep -F "package: name='com.dailysmart.app.v2'"
-      - name: Upload APK
+      - name: Upload debug APK
         uses: actions/upload-artifact@v4
         with:
-          name: DailySmart-V2-Native-APK
+          name: DailySmart-V2-Debug-APK
           path: DailySmartV2/app/build/outputs/apk/debug/app-debug.apk
           retention-days: 14
+      - name: Check release credentials
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.release == true }}
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          FIREBASE_CONFIG_BASE64: ${{ secrets.FIREBASE_GOOGLE_SERVICES_JSON_BASE64 }}
+        run: |
+          test -n "$KEYSTORE_BASE64" || { echo "Missing ANDROID_KEYSTORE_BASE64"; exit 1; }
+          test -n "$KEYSTORE_PASSWORD" || { echo "Missing ANDROID_KEYSTORE_PASSWORD"; exit 1; }
+          test -n "$KEY_ALIAS" || { echo "Missing ANDROID_KEY_ALIAS"; exit 1; }
+          test -n "$KEY_PASSWORD" || { echo "Missing ANDROID_KEY_PASSWORD"; exit 1; }
+          test -n "$FIREBASE_CONFIG_BASE64" || { echo "Missing FIREBASE_GOOGLE_SERVICES_JSON_BASE64"; exit 1; }
+      - name: Prepare signing key
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.release == true }}
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/dailysmart-upload.jks"
+          test -s "$RUNNER_TEMP/dailysmart-upload.jks"
+      - name: Build signed release APK and AAB
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.release == true }}
+        working-directory: DailySmartV2
+        env:
+          ANDROID_KEYSTORE_FILE: ${{ runner.temp }}/dailysmart-upload.jks
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: gradle :app:assembleRelease :app:bundleRelease --stacktrace
+      - name: Verify signed release APK and AAB
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.release == true }}
+        working-directory: DailySmartV2
+        run: |
+          APK="app/build/outputs/apk/release/app-release.apk"
+          AAB="app/build/outputs/bundle/release/app-release.aab"
+          test -s "$APK"
+          test -s "$AAB"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -F "package: name='com.dailysmart.app.v2'"
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose "$APK"
+          jarsigner -verify "$AAB"
+      - name: Upload signed release APK and AAB
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.release == true }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: DailySmart-V2-Signed-Release
+          path: |
+            DailySmartV2/app/build/outputs/apk/release/app-release.apk
+            DailySmartV2/app/build/outputs/bundle/release/app-release.aab
+          retention-days: 30

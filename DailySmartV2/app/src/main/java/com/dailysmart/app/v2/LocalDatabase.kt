@@ -13,12 +13,12 @@ class LocalDatabase(context: Context) : SQLiteOpenHelper(
     context.applicationContext,
     "dailysmart_v2.db",
     null,
-    2
+    3
 ) {
     override fun onCreate(db: SQLiteDatabase) {
-        db.execSQL("CREATE TABLE tasks (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT NOT NULL, done INTEGER NOT NULL)")
-        db.execSQL("CREATE TABLE money (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT NOT NULL, amount REAL NOT NULL, income INTEGER NOT NULL, created_at INTEGER NOT NULL DEFAULT 0)")
-        db.execSQL("CREATE TABLE habits (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT NOT NULL, completed_today INTEGER NOT NULL)")
+        db.execSQL("CREATE TABLE tasks (id INTEGER PRIMARY KEY AUTOINCREMENT, stable_id TEXT NOT NULL UNIQUE, title TEXT NOT NULL, done INTEGER NOT NULL)")
+        db.execSQL("CREATE TABLE money (id INTEGER PRIMARY KEY AUTOINCREMENT, stable_id TEXT NOT NULL UNIQUE, title TEXT NOT NULL, amount REAL NOT NULL, income INTEGER NOT NULL, created_at INTEGER NOT NULL DEFAULT 0)")
+        db.execSQL("CREATE TABLE habits (id INTEGER PRIMARY KEY AUTOINCREMENT, stable_id TEXT NOT NULL UNIQUE, title TEXT NOT NULL, completed_today INTEGER NOT NULL)")
         db.execSQL("CREATE TABLE metadata (key TEXT PRIMARY KEY NOT NULL, value TEXT NOT NULL)")
     }
 
@@ -26,6 +26,18 @@ class LocalDatabase(context: Context) : SQLiteOpenHelper(
         if (oldVersion < 2) {
             // Existing records have no reliable transaction date; zero means unknown.
             db.execSQL("ALTER TABLE money ADD COLUMN created_at INTEGER NOT NULL DEFAULT 0")
+        }
+        if (oldVersion < 3) {
+            // Add durable public IDs without discarding or reordering existing records.
+            db.execSQL("ALTER TABLE tasks ADD COLUMN stable_id TEXT")
+            db.execSQL("ALTER TABLE money ADD COLUMN stable_id TEXT")
+            db.execSQL("ALTER TABLE habits ADD COLUMN stable_id TEXT")
+            db.execSQL("UPDATE tasks SET stable_id = lower(hex(randomblob(16))) WHERE stable_id IS NULL OR stable_id = ''")
+            db.execSQL("UPDATE money SET stable_id = lower(hex(randomblob(16))) WHERE stable_id IS NULL OR stable_id = ''")
+            db.execSQL("UPDATE habits SET stable_id = lower(hex(randomblob(16))) WHERE stable_id IS NULL OR stable_id = ''")
+            db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS idx_tasks_stable_id ON tasks(stable_id)")
+            db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS idx_money_stable_id ON money(stable_id)")
+            db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS idx_habits_stable_id ON habits(stable_id)")
         }
     }
 
@@ -48,16 +60,16 @@ class LocalDatabase(context: Context) : SQLiteOpenHelper(
 
     fun loadTasks(): List<TaskItem> {
         val result = mutableListOf<TaskItem>()
-        readableDatabase.rawQuery("SELECT title, done FROM tasks ORDER BY id", null).use { cursor ->
-            while (cursor.moveToNext()) result += TaskItem(cursor.getString(0), cursor.getInt(1) == 1)
+        readableDatabase.rawQuery("SELECT stable_id, title, done FROM tasks ORDER BY id", null).use { cursor ->
+            while (cursor.moveToNext()) result += TaskItem(cursor.getString(1), cursor.getInt(2) == 1, cursor.getString(0))
         }
         return result
     }
 
     fun loadMoney(): List<MoneyItem> {
         val result = mutableListOf<MoneyItem>()
-        readableDatabase.rawQuery("SELECT title, amount, income, created_at FROM money ORDER BY id", null).use { cursor ->
-            while (cursor.moveToNext()) result += MoneyItem(cursor.getString(0), cursor.getDouble(1), cursor.getInt(2) == 1, cursor.getLong(3))
+        readableDatabase.rawQuery("SELECT stable_id, title, amount, income, created_at FROM money ORDER BY id", null).use { cursor ->
+            while (cursor.moveToNext()) result += MoneyItem(cursor.getString(1), cursor.getDouble(2), cursor.getInt(3) == 1, cursor.getLong(4), cursor.getString(0))
         }
         return result
     }
@@ -65,8 +77,8 @@ class LocalDatabase(context: Context) : SQLiteOpenHelper(
     fun loadHabitsForToday(today: String): List<HabitItem> {
         val db = writableDatabase
         val result = mutableListOf<HabitItem>()
-        db.rawQuery("SELECT title, completed_today FROM habits ORDER BY id", null).use { cursor ->
-            while (cursor.moveToNext()) result += HabitItem(cursor.getString(0), cursor.getInt(1) == 1)
+        db.rawQuery("SELECT stable_id, title, completed_today FROM habits ORDER BY id", null).use { cursor ->
+            while (cursor.moveToNext()) result += HabitItem(cursor.getString(1), cursor.getInt(2) == 1, cursor.getString(0))
         }
         if (getMeta(db, "habits_date") != today) {
             val reset = result.map { it.copy(completedToday = false) }
@@ -108,6 +120,7 @@ class LocalDatabase(context: Context) : SQLiteOpenHelper(
         db.delete("tasks", null, null)
         items.forEach { item ->
             val values = ContentValues().apply {
+                put("stable_id", item.stableId)
                 put("title", item.title)
                 put("done", if (item.done) 1 else 0)
             }
@@ -119,6 +132,7 @@ class LocalDatabase(context: Context) : SQLiteOpenHelper(
         db.delete("money", null, null)
         items.filter { it.amount.isFinite() && it.amount > 0.0 }.forEach { item ->
             val values = ContentValues().apply {
+                put("stable_id", item.stableId)
                 put("title", item.title)
                 put("amount", item.amount)
                 put("income", if (item.income) 1 else 0)
@@ -132,6 +146,7 @@ class LocalDatabase(context: Context) : SQLiteOpenHelper(
         db.delete("habits", null, null)
         items.forEach { item ->
             val values = ContentValues().apply {
+                put("stable_id", item.stableId)
                 put("title", item.title)
                 put("completed_today", if (item.completedToday) 1 else 0)
             }

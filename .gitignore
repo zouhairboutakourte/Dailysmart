@@ -1,0 +1,18 @@
+# Local Android / Gradle files
+.gradle/
+**/build/
+local.properties
+
+# Firebase app configuration (supply locally or through protected CI secrets)
+DailySmartV2/app/google-services.json
+
+# Android signing material — never commit upload keys or certificates with passwords
+*.jks
+*.keystore
+*.keystore.properties
+
+# IDE and OS files
+.idea/
+*.iml
+.DS_Store
+Thumbs.db

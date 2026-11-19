@@ -34,4 +34,16 @@ class CsvParserTest {
     fun rejectsUnclosedQuotedField() {
         parseCsv("type,description\nexpense,\"unfinished")
     }
+    @Test
+    fun parsesSemicolonDelimitedFrenchCsvAndCommaDecimals() {
+        val rows = parseCsv(
+            "type;description;amount;currency\n" +
+                "expense;Courses;12,50;MAD\n" +
+                "income;Salaire;8 500;MAD"
+        )
+        assertEquals(3, rows.size)
+        assertEquals("12,50", rows[1][2])
+        assertEquals("8 500", rows[2][2])
+    }
+
 }

@@ -16,6 +16,16 @@ class ReminderManagerTest {
     }
 
     @Test
+    fun reminderNotificationChannelIsLocalized() {
+        assertEquals("DailySmart reminders", ReminderManager.channelName("en"))
+        assertEquals("Rappels DailySmart", ReminderManager.channelName("fr"))
+        assertEquals("تذكيرات DailySmart", ReminderManager.channelName("ar"))
+        assertEquals("Notifications for your personal reminders.", ReminderManager.channelDescription("en"))
+        assertEquals("Notifications de vos rappels personnels.", ReminderManager.channelDescription("fr"))
+        assertEquals("إشعارات التذكيرات الشخصية ديالك.", ReminderManager.channelDescription("ar"))
+    }
+
+    @Test
     fun rejectsInvalidClockValues() {
         assertThrows(IllegalArgumentException::class.java) {
             ReminderManager.epochMillis(LocalDate.of(2026, 11, 12), 24, 0, ZoneId.of("UTC"))

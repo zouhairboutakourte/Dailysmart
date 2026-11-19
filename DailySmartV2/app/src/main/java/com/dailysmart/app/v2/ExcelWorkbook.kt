@@ -78,12 +78,28 @@ object ExcelWorkbook {
     fun exportWorkspace(items: List<MoneyItem>, tasks: List<TaskItem>, habits: List<HabitItem>, scope: String, language: String): ByteArray {
         val sheets = mutableListOf<Pair<String,String>>()
         fun makeSheet(name:String, rows:List<List<String>>):Pair<String,String> {
-            val xml=buildString { append("<?xml version=\"1.0\" encoding=\"UTF-8\"?><worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\"><sheetData>"); rows.forEachIndexed { ri,row -> append("<row r=\"${ri+1}\">"); row.forEachIndexed { ci,v -> append(cell(ci,ri+1,v)) }; append("</row>") }; append("</sheetData></worksheet>") }; return name to xml
+            val xml=buildString {
+                append("<?xml version=\"1.0\" encoding=\"UTF-8\"?><worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\"><sheetData>")
+                rows.forEachIndexed { ri,row ->
+                    append("<row r=\""+(ri+1)+"\">")
+                    row.forEachIndexed { ci,v ->
+                        append(when {
+                            v.startsWith("\u0001=") -> formulaCell(ci, ri+1, v.drop(2))
+                            v.toDoubleOrNull() != null -> numberCell(ci, ri+1, v)
+                            else -> cell(ci, ri+1, v)
+                        })
+                    }
+                    append("</row>")
+                }
+                append("</sheetData></worksheet>")
+            }
+            return name to xml
         }
         if(scope=="all"||scope=="finance"){
             val income=items.filter{it.income}.sumOf{it.amount}; val expense=items.filterNot{it.income}.sumOf{it.amount}
             val cats=items.filterNot{it.income}.groupBy{FinanceAnalytics.categoryFor(it.title)}.mapValues{it.value.sumOf{m->m.amount}}.toList().sortedByDescending{it.second}
-            val dash=mutableListOf(listOf("DailySmart Dashboard"),listOf("Generated",java.time.LocalDate.now().toString()),listOf("Income MAD",income.toString()),listOf("Expenses MAD",expense.toString()),listOf("Net balance MAD",(income-expense).toString()),listOf("Transactions",items.size.toString()),listOf("Top category",cats.firstOrNull()?.first?:"—"),listOf("Category","Expenses MAD","Visual bar"))
+            val lastFinanceRow=(items.size+1).coerceAtLeast(2)
+            val dash=mutableListOf(listOf("DailySmart Dashboard"),listOf("Generated",java.time.LocalDate.now().toString()),listOf("Income MAD","\u0001=SUMIF(Finance!\$A\$2:\$A\$"+lastFinanceRow+",\"Income\",Finance!\$C\$2:\$C\$"+lastFinanceRow+")"),listOf("Expenses MAD","\u0001=SUMIF(Finance!\$A\$2:\$A\$"+lastFinanceRow+",\"Expense\",Finance!\$C\$2:\$C\$"+lastFinanceRow+")"),listOf("Net balance MAD","\u0001=B3-B4"),listOf("Transactions",items.size.toString()),listOf("Top category",cats.firstOrNull()?.first?:"—"),listOf("Category","Expenses MAD","Visual bar"))
             val maxCategory=cats.maxOfOrNull{it.second}?:0.0; cats.forEach{p->dash+=listOf(p.first,p.second.toString(),"█".repeat(if(maxCategory>0)(p.second/maxCategory*20).toInt().coerceAtLeast(1) else 0))}
             sheets+=makeSheet("Dashboard",dash)
             sheets+=makeSheet("Finance",listOf(listOf("Type","Description","Amount MAD","Date","Category"))+items.map{listOf(if(it.income)"Income" else "Expense",it.title,it.amount.toString(),FinanceAnalytics.dateString(it.createdAt),if(it.income)"Income" else FinanceAnalytics.categoryFor(it.title))})
@@ -95,15 +111,42 @@ object ExcelWorkbook {
         }
         if(scope=="all"||scope=="tasks") sheets+=makeSheet("Tasks",listOf(listOf("Task","Status"))+tasks.map{listOf(it.title,if(it.done)"Completed" else "Pending")})
         if(scope=="all"||scope=="habits") sheets+=makeSheet("Habits",listOf(listOf("Habit","Completed today"))+habits.map{listOf(it.title,if(it.completedToday)"Yes" else "No")})
+        val chartXmls = mutableListOf<String>()
+        val financeIncluded = scope == "all" || scope == "finance"
+        val chartCategories = if (financeIncluded) items.filterNot { it.income }.groupBy { FinanceAnalytics.categoryFor(it.title) }
+            .mapValues { it.value.sumOf { m -> m.amount } }.toList().sortedByDescending { it.second } else emptyList()
+        val chartMonthly = if (financeIncluded) items.filter { it.createdAt > 0L }
+            .groupBy { java.time.Instant.ofEpochMilli(it.createdAt).atZone(java.time.ZoneId.systemDefault()).toLocalDate().withDayOfMonth(1) }
+            .toList().sortedBy { it.first }.map { it.first.toString() to it.second.filterNot { m -> m.income }.sumOf { m -> m.amount } } else emptyList()
+        if (chartCategories.isNotEmpty()) chartXmls += pieChartXml("Categories", chartCategories.map { it.first }, chartCategories.map { it.second })
+        if (chartMonthly.isNotEmpty()) chartXmls += barChartXml("Monthly", chartMonthly.map { it.first }, chartMonthly.map { it.second })
+        if (chartXmls.isNotEmpty()) {
+            val dashboardIndex = sheets.indexOfFirst { it.first == "Dashboard" }
+            if (dashboardIndex >= 0) {
+                val dashboard = sheets[dashboardIndex]
+                val withDrawing = dashboard.second
+                    .replace("<worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\">", "<worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\">")
+                    .replace("</worksheet>", "<drawing r:id=\"rId1\"/></worksheet>")
+                sheets[dashboardIndex] = dashboard.first to withDrawing
+            }
+        }
         val out=ByteArrayOutputStream(); ZipOutputStream(out).use{zip->
-            val overrides=sheets.indices.joinToString(""){i->"<Override PartName=\"/xl/worksheets/sheet${i+1}.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml\"/>"}
-            put(zip,"[Content_Types].xml","<?xml version=\"1.0\"?><Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\"><Default Extension=\"rels\" ContentType=\"application/vnd.openxmlformats-package.relationships+xml\"/><Default Extension=\"xml\" ContentType=\"application/xml\"/><Override PartName=\"/xl/workbook.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml\"/>$overrides</Types>")
+            val overrides=sheets.indices.joinToString(""){i->"<Override PartName=\"/xl/worksheets/sheet"+(i+1)+".xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml\"/>"}
+            val chartOverrides = if (chartXmls.isEmpty()) "" else "<Override PartName=\"/xl/drawings/drawing1.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.drawing+xml\"/>" + chartXmls.indices.joinToString("") { i -> "<Override PartName=\"/xl/charts/chart"+(i+1)+".xml\" ContentType=\"application/vnd.openxmlformats-officedocument.drawingml.chart+xml\"/>" }
+            put(zip,"[Content_Types].xml","<?xml version=\"1.0\"?><Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\"><Default Extension=\"rels\" ContentType=\"application/vnd.openxmlformats-package.relationships+xml\"/><Default Extension=\"xml\" ContentType=\"application/xml\"/><Override PartName=\"/xl/workbook.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml\"/>"+overrides+chartOverrides+"</Types>")
             put(zip,"_rels/.rels","<?xml version=\"1.0\"?><Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument\" Target=\"xl/workbook.xml\"/></Relationships>")
-            val nodes=sheets.mapIndexed{i,s->"<sheet name=\"${s.first}\" sheetId=\"${i+1}\" r:id=\"rId${i+1}\"/>"}.joinToString("")
-            put(zip,"xl/workbook.xml","<?xml version=\"1.0\"?><workbook xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\"><sheets>$nodes</sheets></workbook>")
-            val rels=sheets.mapIndexed{i,_->"<Relationship Id=\"rId${i+1}\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet\" Target=\"worksheets/sheet${i+1}.xml\"/>"}.joinToString("")
-            put(zip,"xl/_rels/workbook.xml.rels","<?xml version=\"1.0\"?><Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">$rels</Relationships>")
-            sheets.forEachIndexed{i,s->put(zip,"xl/worksheets/sheet${i+1}.xml",s.second)}
+            val nodes=sheets.mapIndexed{i,s->"<sheet name=\""+s.first+"\" sheetId=\""+(i+1)+"\" r:id=\"rId"+(i+1)+"\"/>"}.joinToString("")
+            put(zip,"xl/workbook.xml","<?xml version=\"1.0\"?><workbook xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\"><sheets>"+nodes+"</sheets><calcPr calcId=\"191029\" fullCalcOnLoad=\"1\" forceFullCalc=\"1\"/></workbook>")
+            val rels=sheets.mapIndexed{i,_->"<Relationship Id=\"rId"+(i+1)+"\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet\" Target=\"worksheets/sheet"+(i+1)+".xml\"/>"}.joinToString("")
+            put(zip,"xl/_rels/workbook.xml.rels","<?xml version=\"1.0\"?><Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">"+rels+"</Relationships>")
+            sheets.forEachIndexed{i,s->put(zip,"xl/worksheets/sheet"+(i+1)+".xml",s.second)}
+            if (chartXmls.isNotEmpty()) {
+                put(zip,"xl/worksheets/_rels/sheet1.xml.rels","<?xml version=\"1.0\"?><Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing\" Target=\"../drawings/drawing1.xml\"/></Relationships>")
+                put(zip,"xl/drawings/drawing1.xml",drawingXml(chartXmls.size))
+                val drawingRels=chartXmls.indices.joinToString("") { i -> "<Relationship Id=\"rId"+(i+1)+"\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart\" Target=\"../charts/chart"+(i+1)+".xml\"/>" }
+                put(zip,"xl/drawings/_rels/drawing1.xml.rels","<?xml version=\"1.0\"?><Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">"+drawingRels+"</Relationships>")
+                chartXmls.forEachIndexed { i, xml -> put(zip,"xl/charts/chart"+(i+1)+".xml",xml) }
+            }
         }; return out.toByteArray()
     }
 
@@ -143,16 +186,20 @@ object ExcelWorkbook {
         val rows = readRows(sheet, shared)
         if (rows.isEmpty()) return emptyList()
         val header = rows.first().map { it.trim().lowercase() }
-        val typeCol = header.indexOfFirst { it in listOf("type", "kind", "transaction", "نوع", "النوع", "type d'opération") }.let { if (it < 0) 0 else it }
-        val descriptionCol = header.indexOfFirst { it in listOf("description", "title", "label", "details", "الوصف", "البيان") }.let { if (it < 0) 1 else it }
-        val amountCol = header.indexOfFirst { it in listOf("amount", "value", "montant", "المبلغ", "المجموع") }.let { if (it < 0) 2 else it }
+        val typeHeader = header.indexOfFirst { it in listOf("type", "kind", "transaction", "نوع", "النوع", "type d'opération") }
+        val descriptionHeader = header.indexOfFirst { it in listOf("description", "title", "label", "details", "الوصف", "البيان") }
+        val amountHeader = header.indexOfFirst { it in listOf("amount", "value", "montant", "المبلغ", "المجموع", "amount mad") }
+        val hasHeader = typeHeader >= 0 || descriptionHeader >= 0 || amountHeader >= 0
+        val typeCol = typeHeader.takeIf { it >= 0 } ?: 0
+        val descriptionCol = descriptionHeader.takeIf { it >= 0 } ?: 1
+        val amountCol = amountHeader.takeIf { it >= 0 } ?: 2
         val dateCol = header.indexOfFirst { it in listOf("date", "transaction date", "التاريخ") }
-        return rows.drop(1).mapNotNull { row ->
-            val amount = row.getOrNull(amountCol)?.replace(",", ".")?.replace(Regex("[^0-9.\\-]"), "")?.toDoubleOrNull()
+        val dataRows = if (hasHeader) rows.drop(1) else rows
+        return dataRows.mapNotNull { row ->
+            val amount = MoneyAmountParser.parse(row.getOrNull(amountCol).orEmpty())
                 ?: return@mapNotNull null
-            if (!amount.isFinite() || amount <= 0.0) return@mapNotNull null
             val type = row.getOrNull(typeCol).orEmpty().lowercase()
-            val income = type.contains("income") || type.contains("revenu") || type.contains("دخل") || type.contains("recette")
+            val income = type.contains("income") || type.contains("revenu") || type.contains("دخل") || type.contains("recette") || type.contains("salary") || type.contains("salaire")
             val description = row.getOrNull(descriptionCol).orEmpty().ifBlank { if (income) "Income" else "Expense" }
             if (description.length > 500) return@mapNotNull null
             MoneyItem(description, amount, income, FinanceAnalytics.timestampFromDate(row.getOrNull(dateCol).orEmpty()))
@@ -219,6 +266,48 @@ object ExcelWorkbook {
         }
         return result
     }
+
+
+    private fun formulaCell(column: Int, row: Int, formula: String): String {
+        val ref = columnName(column) + row
+        return "<c r=\""+ref+"\"><f>"+formula+"</f><v></v></c>"
+    }
+
+    private fun numberCell(column: Int, row: Int, value: String): String {
+        val ref = columnName(column) + row
+        return "<c r=\""+ref+"\" t=\"n\"><v>"+value+"</v></c>"
+    }
+
+    private fun drawingXml(count: Int): String {
+        val anchors = (1..count).joinToString("") { index ->
+            val fromCol = if (index == 1) 6 else 13
+            val toCol = if (index == 1) 12 else 19
+            val fromRow = if (index == 1) 1 else 16
+            val toRow = if (index == 1) 15 else 30
+            "<xdr:twoCellAnchor><xdr:from><xdr:col>"+fromCol+"</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>"+fromRow+"</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from><xdr:to><xdr:col>"+toCol+"</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>"+toRow+"</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:to><xdr:graphicFrame macro=\"\"><xdr:nvGraphicFramePr><xdr:cNvPr id=\""+(index+1)+"\" name=\"Chart "+index+"\"/><xdr:cNvGraphicFramePr/></xdr:nvGraphicFramePr><xdr:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"0\" cy=\"0\"/></xdr:xfrm><a:graphic><a:graphicData uri=\"http://schemas.openxmlformats.org/drawingml/2006/chart\"><c:chart xmlns:c=\"http://schemas.openxmlformats.org/drawingml/2006/chart\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" r:id=\"rId"+index+"\"/></a:graphicData></a:graphic></xdr:graphicFrame><xdr:clientData/></xdr:twoCellAnchor>"
+        }
+        return "<?xml version=\"1.0\" encoding=\"UTF-8\"?><xdr:wsDr xmlns:xdr=\"http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing\" xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\">"+anchors+"</xdr:wsDr>"
+    }
+
+    private fun pieChartXml(sheet: String, labels: List<String>, values: List<Double>): String {
+        val end = labels.size + 1
+        val labelFormula = "'"+sheet+"'!\$A\$2:\$A\$"+end
+        val valueFormula = "'"+sheet+"'!\$B\$2:\$B\$"+end
+        val labelCache = labels.mapIndexed { i, v -> "<c:pt idx=\""+i+"\"><c:v>"+xmlEscape(v)+"</c:v></c:pt>" }.joinToString("")
+        val valueCache = values.mapIndexed { i, v -> "<c:pt idx=\""+i+"\"><c:v>"+v+"</c:v></c:pt>" }.joinToString("")
+        return "<?xml version=\"1.0\" encoding=\"UTF-8\"?><c:chartSpace xmlns:c=\"http://schemas.openxmlformats.org/drawingml/2006/chart\" xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\"><c:chart><c:plotArea><c:layout/><c:pieChart><c:varyColors val=\"1\"/><c:ser><c:idx val=\"0\"/><c:order val=\"0\"/><c:cat><c:strRef><c:f>"+labelFormula+"</c:f><c:strCache><c:ptCount val=\""+labels.size+"\"/>"+labelCache+"</c:strCache></c:strRef></c:cat><c:val><c:numRef><c:f>"+valueFormula+"</c:f><c:numCache><c:formatCode>General</c:formatCode><c:ptCount val=\""+values.size+"\"/>"+valueCache+"</c:numCache></c:numRef></c:val></c:ser><c:dLbls><c:showLegendKey val=\"0\"/><c:showPercent val=\"1\"/><c:showCategoryName val=\"1\"/></c:dLbls><c:firstSliceAng val=\"0\"/></c:pieChart><c:legend><c:legendPos val=\"r\"/><c:layout/></c:legend><c:plotVisOnly val=\"1\"/></c:plotArea><c:plotVisOnly val=\"1\"/><c:dispBlanksAs val=\"gap\"/></c:chart></c:chartSpace>"
+    }
+
+    private fun barChartXml(sheet: String, labels: List<String>, values: List<Double>): String {
+        val end = labels.size + 1
+        val labelFormula = "'"+sheet+"'!\$A\$2:\$A\$"+end
+        val valueFormula = "'"+sheet+"'!\$C\$2:\$C\$"+end
+        val labelCache = labels.mapIndexed { i, v -> "<c:pt idx=\""+i+"\"><c:v>"+xmlEscape(v)+"</c:v></c:pt>" }.joinToString("")
+        val valueCache = values.mapIndexed { i, v -> "<c:pt idx=\""+i+"\"><c:v>"+v+"</c:v></c:pt>" }.joinToString("")
+        return "<?xml version=\"1.0\" encoding=\"UTF-8\"?><c:chartSpace xmlns:c=\"http://schemas.openxmlformats.org/drawingml/2006/chart\" xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\"><c:chart><c:plotArea><c:layout/><c:barChart><c:barDir val=\"col\"/><c:grouping val=\"clustered\"/><c:varyColors val=\"0\"/><c:ser><c:idx val=\"0\"/><c:order val=\"0\"/><c:cat><c:strRef><c:f>"+labelFormula+"</c:f><c:strCache><c:ptCount val=\""+labels.size+"\"/>"+labelCache+"</c:strCache></c:strRef></c:cat><c:val><c:numRef><c:f>"+valueFormula+"</c:f><c:numCache><c:formatCode>General</c:formatCode><c:ptCount val=\""+values.size+"\"/>"+valueCache+"</c:numCache></c:numRef></c:val></c:ser><c:gapWidth val=\"80\"/><c:axId val=\"123456\"/><c:axId val=\"123457\"/></c:barChart><c:catAx><c:axId val=\"123456\"/><c:scaling><c:orientation val=\"minMax\"/></c:scaling><c:axPos val=\"b\"/><c:tickLblPos val=\"nextTo\"/><c:crossAx val=\"123457\"/><c:crosses val=\"autoZero\"/></c:catAx><c:valAx><c:axId val=\"123457\"/><c:scaling><c:orientation val=\"minMax\"/></c:scaling><c:axPos val=\"l\"/><c:majorGridlines/><c:numFmt formatCode=\"#,##0.00\" sourceLinked=\"0\"/><c:crossAx val=\"123456\"/><c:crosses val=\"autoZero\"/><c:crossesAt val=\"0\"/></c:valAx><c:legend><c:legendPos val=\"b\"/><c:layout/></c:legend><c:plotVisOnly val=\"1\"/></c:plotArea><c:plotVisOnly val=\"1\"/><c:dispBlanksAs val=\"gap\"/></c:chart></c:chartSpace>"
+    }
+
+    private fun xmlEscape(value: String): String = value.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
     private fun cell(column: Int, row: Int, value: String): String {
         val ref = columnName(column) + row

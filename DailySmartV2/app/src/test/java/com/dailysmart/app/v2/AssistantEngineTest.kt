@@ -82,4 +82,24 @@ class AssistantEngineTest {
         assertTrue(AssistantEngine.parse("ch7al sraft") is AssistantAction.FinanceReport)
         assertTrue(AssistantEngine.parse("شحال صرفت") is AssistantAction.FinanceReport)
     }
+    @Test
+    fun parsesGroupedAmountsWithoutTruncatingTheDescription() {
+        val action = AssistantEngine.parse("expense 1 500 rent")
+        assertTrue(action is AssistantAction.AddMoney)
+        val money = action as AssistantAction.AddMoney
+        assertEquals(1500.0, money.amount, 0.001)
+        assertEquals("rent", money.description)
+    }
+
+    @Test
+    fun parsesArabicIndicAmountAndFrenchGroupedAmount() {
+        val arabic = AssistantEngine.parse("مصروف ٥٠ غداء")
+        assertTrue(arabic is AssistantAction.AddMoney)
+        assertEquals(50.0, (arabic as AssistantAction.AddMoney).amount, 0.001)
+
+        val french = AssistantEngine.parse("dépense 1.500,50 courses")
+        assertTrue(french is AssistantAction.AddMoney)
+        assertEquals(1500.5, (french as AssistantAction.AddMoney).amount, 0.001)
+    }
+
 }

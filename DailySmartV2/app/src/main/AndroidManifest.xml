@@ -2,7 +2,7 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
-    <application android:allowBackup="true" android:icon="@drawable/ic_dailysmart" android:roundIcon="@drawable/ic_dailysmart" android:label="DailySmart" android:supportsRtl="true" android:theme="@android:style/Theme.Material.NoActionBar">
+    <application android:allowBackup="false" android:icon="@drawable/ic_dailysmart" android:roundIcon="@drawable/ic_dailysmart" android:label="DailySmart" android:supportsRtl="true" android:theme="@android:style/Theme.Material.NoActionBar">
         <receiver android:name=".ReminderReceiver" android:exported="false" />
         <receiver android:name=".ReminderBootReceiver" android:enabled="true" android:exported="false">
             <intent-filter>

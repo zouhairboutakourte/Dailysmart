@@ -127,11 +127,27 @@ object ReminderManager {
 
     private fun requestCode(id: Long): Int = (id xor (id ushr 32)).toInt()
 
+    internal fun channelName(language: String): String = when (language) {
+        "fr" -> "Rappels DailySmart"
+        "ar" -> "تذكيرات DailySmart"
+        else -> "DailySmart reminders"
+    }
+
+    internal fun channelDescription(language: String): String = when (language) {
+        "fr" -> "Notifications de vos rappels personnels."
+        "ar" -> "إشعارات التذكيرات الشخصية ديالك."
+        else -> "Notifications for your personal reminders."
+    }
+
     private fun ensureChannel(context: Context) {
         if (Build.VERSION.SDK_INT >= 26) {
+            val language = context.getSharedPreferences("dailysmart_v2", Context.MODE_PRIVATE)
+                .getString("language", "ar") ?: "ar"
             val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             manager.createNotificationChannel(
-                NotificationChannel(CHANNEL_ID, "DailySmart reminders", NotificationManager.IMPORTANCE_DEFAULT)
+                NotificationChannel(CHANNEL_ID, channelName(language), NotificationManager.IMPORTANCE_DEFAULT).apply {
+                    description = channelDescription(language)
+                }
             )
         }
     }

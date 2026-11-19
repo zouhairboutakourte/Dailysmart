@@ -2,6 +2,7 @@ package com.dailysmart.app.v2
 
 import android.Manifest
 import android.content.Context
+import android.content.res.Configuration
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -15,7 +16,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -29,6 +30,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.LayoutDirection
@@ -44,7 +46,12 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.io.InputStream
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 private val Navy = Color(0xFF071A33)
 private val Panel = Color(0xFF0D2948)
@@ -64,35 +71,70 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-data class TaskItem(val title: String, val done: Boolean = false)
-data class MoneyItem(val title: String, val amount: Double, val income: Boolean, val createdAt: Long = System.currentTimeMillis())
-data class HabitItem(val title: String, val completedToday: Boolean = false)
+data class TaskItem(val title: String, val done: Boolean = false, val stableId: String = java.util.UUID.randomUUID().toString())
+data class MoneyItem(val title: String, val amount: Double, val income: Boolean, val createdAt: Long = System.currentTimeMillis(), val stableId: String = java.util.UUID.randomUUID().toString())
+data class HabitItem(val title: String, val completedToday: Boolean = false, val stableId: String = java.util.UUID.randomUUID().toString())
+
+private data class InitialWorkspace(val tasks: List<TaskItem>, val money: List<MoneyItem>, val habits: List<HabitItem>)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DailySmartApp() {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    // Serialize persistence writes off the UI thread to keep rapid edits ordered.
+    val databaseDispatcher = remember { Dispatchers.IO.limitedParallelism(1) }
+    // Keep queued writes alive until the database is closed on the same serial dispatcher.
+    val databaseScope = remember(databaseDispatcher) { CoroutineScope(SupervisorJob() + databaseDispatcher) }
     val geminiConfigured = remember { GeminiAssistant.initialize(context) }
     var geminiLoading by remember { mutableStateOf(false) }
     val prefs = remember { context.getSharedPreferences("dailysmart_v2", Context.MODE_PRIVATE) }
-    val database = remember {
-        LocalDatabase(context).also { db ->
-            db.migrateLegacyOnce(
+    var language by remember { mutableStateOf(prefs.getString("language", "ar") ?: "ar") }
+    val database = remember { LocalDatabase(context) }
+    DisposableEffect(database, databaseScope) {
+        onDispose {
+            databaseScope.launch {
+                database.close()
+                databaseScope.cancel()
+            }
+        }
+    }
+    // Database migration and first read happen on the serialized IO dispatcher, never on the first UI frame.
+    val initialWorkspace by produceState<InitialWorkspace?>(initialValue = null, database) {
+        value = withContext(databaseDispatcher) {
+            database.migrateLegacyOnce(
                 loadTasks(prefs), loadMoney(prefs), loadHabits(prefs),
                 prefs.getString("habits_date", "") ?: ""
             )
+            InitialWorkspace(
+                database.loadTasks(),
+                database.loadMoney(),
+                database.loadHabitsForToday(todayKey())
+            )
         }
     }
-    DisposableEffect(database) {
-        onDispose { database.close() }
+    if (initialWorkspace == null) {
+        Box(
+            modifier = Modifier.fillMaxSize().background(Navy),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                CircularProgressIndicator(color = Accent)
+                Text(
+                    uiText(language, "Loading your workspace…", "Chargement de votre espace…", "جاري تحميل مساحة العمل…"),
+                    color = White,
+                    fontSize = 14.sp
+                )
+            }
+        }
+        return
     }
-    var tasks by remember { mutableStateOf(database.loadTasks()) }
-    var money by remember { mutableStateOf(database.loadMoney()) }
-    var habits by remember { mutableStateOf(database.loadHabitsForToday(todayKey())) }
+    val loadedWorkspace = initialWorkspace!!
+    var tasks by remember(loadedWorkspace) { mutableStateOf(loadedWorkspace.tasks) }
+    var money by remember(loadedWorkspace) { mutableStateOf(loadedWorkspace.money) }
+    var habits by remember(loadedWorkspace) { mutableStateOf(loadedWorkspace.habits) }
     var newHabit by remember { mutableStateOf("") }
     var tab by remember { mutableStateOf("Assistant") }
-    var language by remember { mutableStateOf(prefs.getString("language", "ar") ?: "ar") }
     fun changeLanguage(code: String) {
         language = code
         prefs.edit().putString("language", code).apply()
@@ -100,6 +142,9 @@ fun DailySmartApp() {
     var command by remember { mutableStateOf("") }
     var newTitle by remember { mutableStateOf("") }
     var newAmount by remember { mutableStateOf("") }
+    var editingMoneyId by remember { mutableStateOf<String?>(null) }
+    var editMoneyTitle by remember { mutableStateOf("") }
+    var editMoneyAmount by remember { mutableStateOf("") }
     var monthlyBudgetDraft by remember { mutableStateOf(prefs.getString("monthly_budget_mad", "") ?: "") }
     var monthlySavingsDraft by remember { mutableStateOf(prefs.getString("monthly_savings_goal_mad", "") ?: "") }
     var savedMonthlyBudget by remember { mutableStateOf(prefs.getString("monthly_budget_mad", null)?.toDoubleOrNull()?.takeIf { it.isFinite() && it > 0.0 }) }
@@ -171,9 +216,40 @@ fun DailySmartApp() {
         }.onFailure { info = uiText(language, "Restore failed. The file may be invalid.", "Échec de la restauration. Le fichier est peut-être invalide.", "فشل الاسترجاع. ربما الملف غير صالح.") }
     }
 
-    fun saveTasks() { database.replaceTasks(tasks) }
-    fun saveMoney() { database.replaceMoney(money) }
-    fun saveHabits() { database.replaceHabits(habits, todayKey()) }
+    fun saveTasks() {
+        val snapshot = tasks.toList()
+        databaseScope.launch {
+            runCatching { database.replaceTasks(snapshot) }
+                .onFailure {
+                    withContext(Dispatchers.Main.immediate) {
+                        info = uiText(language, "Could not save tasks. Please try again.", "Impossible d’enregistrer les tâches. Réessayez.", "تعذر حفظ المهام. حاول مرة أخرى.")
+                    }
+                }
+        }
+    }
+    fun saveMoney() {
+        val snapshot = money.toList()
+        databaseScope.launch {
+            runCatching { database.replaceMoney(snapshot) }
+                .onFailure {
+                    withContext(Dispatchers.Main.immediate) {
+                        info = uiText(language, "Could not save finance records. Please try again.", "Impossible d’enregistrer les opérations. Réessayez.", "تعذر حفظ العمليات المالية. حاول مرة أخرى.")
+                    }
+                }
+        }
+    }
+    fun saveHabits() {
+        val snapshot = habits.toList()
+        val date = todayKey()
+        databaseScope.launch {
+            runCatching { database.replaceHabits(snapshot, date) }
+                .onFailure {
+                    withContext(Dispatchers.Main.immediate) {
+                        info = uiText(language, "Could not save habits. Please try again.", "Impossible d’enregistrer les habitudes. Réessayez.", "تعذر حفظ العادات. حاول مرة أخرى.")
+                    }
+                }
+        }
+    }
     fun showFinanceReport() {
         val totalIncome = money.filter { it.income }.sumOf { it.amount }
         val totalExpense = money.filterNot { it.income }.sumOf { it.amount }
@@ -183,59 +259,173 @@ fun DailySmartApp() {
     LaunchedEffect(Unit) {
         ReminderManager.rescheduleAll(context)
     }
+    val displayedMoney = remember(money) { money.asReversed() }
+    // Reuse finance aggregates across unrelated UI recompositions (typing, tab changes, dialogs).
+    val financeTotals = remember(money) {
+        val income = money.asSequence().filter { it.income }.sumOf { it.amount }
+        val expenses = money.asSequence().filterNot { it.income }.sumOf { it.amount }
+        Triple(income, expenses, income - expenses)
+    }
+
     LaunchedEffect(tab) {
         if (tab == "Reminders") reminders = ReminderManager.load(context)
     }
 
     val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/csv")) { uri ->
-        if (uri != null) runCatching {
-            context.contentResolver.openOutputStream(uri)?.bufferedWriter()?.use { out ->
-                out.appendLine("type,description,amount,currency,date")
-                money.forEach { out.appendLine("${if (it.income) "income" else "expense"},\"${it.title.replace("\"", "\"\"")}\",${it.amount},MAD,${FinanceAnalytics.dateString(it.createdAt)}") }
+        if (uri != null) {
+            val snapshot = money.toList()
+            val languageSnapshot = language
+            info = uiText(language, "Preparing CSV export…", "Préparation de l’export CSV…", "جاري إعداد ملف CSV…")
+            scope.launch {
+                runCatching {
+                    val csv = withContext(Dispatchers.Default) {
+                        buildString {
+                            appendLine("type,description,amount,currency,date")
+                            snapshot.forEach { item ->
+                                val escapedTitle = item.title.replace("\"", "\"\"")
+                                appendLine("${if (item.income) "income" else "expense"},\"${escapedTitle}\",${item.amount},MAD,${FinanceAnalytics.dateString(item.createdAt)}")
+                            }
+                        }
+                    }
+                    withContext(Dispatchers.IO) {
+                        context.contentResolver.openOutputStream(uri)?.bufferedWriter()?.use { it.write(csv) }
+                            ?: throw IllegalStateException("Could not create CSV file.")
+                    }
+                }.onSuccess {
+                    info = uiText(languageSnapshot, "CSV export created.", "Fichier CSV exporté.", "تم تصدير ملف CSV.")
+                }.onFailure {
+                    info = uiText(languageSnapshot, "Export failed. Please try again.", "Échec de l’exportation. Réessayez.", "فشل التصدير. حاول مرة أخرى.")
+                }
             }
-            info = uiText(language, "CSV export created.", "Fichier CSV exporté.", "تم تصدير ملف CSV.")
-        }.onFailure { info = uiText(language, "Export failed. Please try again.", "Échec de l’exportation. Réessayez.", "فشل التصدير. حاول مرة أخرى.") }
+        }
     }
     val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
-        if (uri != null) runCatching {
-            val csvText = context.contentResolver.openInputStream(uri)?.use { readBoundedText(it, 5 * 1024 * 1024, "CSV") } ?: throw IllegalStateException("Could not open CSV file.")
-            val rows = parseCsv(csvText).drop(1)
-            val imported = rows.mapNotNull { p ->
-                if (p.size >= 3) {
-                    val amount = p[2].trim().toDoubleOrNull() ?: return@mapNotNull null
-                    if (!amount.isFinite() || amount <= 0.0) return@mapNotNull null
-                    run {
-                        val income = listOf("income", "revenu", "recette", "دخل").any { p[0].contains(it, true) }
-                        val description = p[1].trim().trim('"').ifBlank { if (income) "Income" else "Expense" }
-                        if (description.length > 500) return@mapNotNull null
-                        MoneyItem(description, amount, income, FinanceAnalytics.timestampFromDate(p.getOrNull(4).orEmpty()))
+        if (uri != null) {
+            val languageSnapshot = language
+            info = uiText(language, "Reading CSV file…", "Lecture du fichier CSV…", "جاري قراءة ملف CSV…")
+            scope.launch {
+                runCatching {
+                    withContext(Dispatchers.IO) {
+                        val csvText = context.contentResolver.openInputStream(uri)?.use {
+                            readBoundedText(it, 5 * 1024 * 1024, "CSV")
+                        } ?: throw IllegalStateException("Could not open CSV file.")
+                        withContext(Dispatchers.Default) {
+                            val parsedRows = parseCsv(csvText)
+                            val firstRow = parsedRows.firstOrNull().orEmpty().map { it.trim().lowercase() }
+                            val hasHeader = firstRow.any { it in listOf("type", "description", "amount", "date", "نوع", "النوع", "الوصف", "المبلغ") }
+                            val rows = if (hasHeader) parsedRows.drop(1) else parsedRows
+                            rows.mapNotNull { row ->
+                                if (row.size < 3) return@mapNotNull null
+                                val amount = MoneyAmountParser.parse(row[2]) ?: return@mapNotNull null
+                                val type = row[0].trim()
+                                val income = listOf("income", "revenu", "recette", "salary", "salaire", "دخل", "راتب").any { type.contains(it, true) }
+                                val description = row[1].trim().trim('"').ifBlank { if (income) "Income" else "Expense" }
+                                if (description.length > 500) return@mapNotNull null
+                                MoneyItem(description, amount, income, FinanceAnalytics.timestampFromDate(row.getOrNull(4).orEmpty()))
+                            }
+                        }
                     }
-                } else null
+                }.onSuccess { imported ->
+                    money = money + imported
+                    saveMoney()
+                    info = uiText(languageSnapshot, "${imported.size} CSV rows imported.", "${imported.size} lignes CSV importées.", "تم استيراد ${imported.size} سطر من CSV.")
+                }.onFailure {
+                    info = uiText(languageSnapshot, "Could not read the CSV file. Check its format and size.", "Impossible de lire le CSV. Vérifiez son format et sa taille.", "تعذر قراءة ملف CSV. تحقق من الصيغة والحجم.")
+                }
             }
-            money = money + imported
-            saveMoney()
-            info = uiText(language, "${imported.size} CSV rows imported.", "${imported.size} lignes CSV importées.", "تم استيراد ${imported.size} سطر من CSV.")
-        }.onFailure { info = uiText(language, "Could not read the CSV file. Check its format and size.", "Impossible de lire le CSV. Vérifiez son format et sa taille.", "تعذر قراءة ملف CSV. تحقق من الصيغة والحجم.") }
+        }
     }
 
     val xlsxExportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")) { uri ->
-        if (uri != null) runCatching {
-            context.contentResolver.openOutputStream(uri)?.use { it.write(ExcelWorkbook.exportWorkspace(money, tasks, habits, reportScope, language)) }
-            info = uiText(language, "Excel workbook exported successfully.", "Classeur Excel exporté avec succès.", "تم تصدير ملف Excel بنجاح.")
-        }.onFailure { info = uiText(language, "Excel export failed. Please try again.", "Échec de l’export Excel. Réessayez.", "فشل تصدير Excel. حاول مرة أخرى.") }
+        if (uri != null) {
+            val moneySnapshot = money.toList()
+            val tasksSnapshot = tasks.toList()
+            val habitsSnapshot = habits.toList()
+            val scopeSnapshot = reportScope
+            val languageSnapshot = language
+            info = uiText(language, "Preparing Excel workbook…", "Préparation du classeur Excel…", "جاري إعداد ملف Excel…")
+            scope.launch {
+                runCatching {
+                    val bytes = withContext(Dispatchers.Default) {
+                        ExcelWorkbook.exportWorkspace(moneySnapshot, tasksSnapshot, habitsSnapshot, scopeSnapshot, languageSnapshot)
+                    }
+                    withContext(Dispatchers.IO) {
+                        context.contentResolver.openOutputStream(uri)?.use { it.write(bytes) }
+                            ?: throw IllegalStateException("Could not create Excel file.")
+                    }
+                }.onSuccess {
+                    info = uiText(languageSnapshot, "Excel workbook exported successfully.", "Classeur Excel exporté avec succès.", "تم تصدير ملف Excel بنجاح.")
+                }.onFailure {
+                    info = uiText(languageSnapshot, "Excel export failed. Please try again.", "Échec de l’export Excel. Réessayez.", "فشل تصدير Excel. حاول مرة أخرى.")
+                }
+            }
+        }
     }
     val xlsxImportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
-        if (uri != null) runCatching {
-            val bytes = context.contentResolver.openInputStream(uri)!!.use { ExcelWorkbook.readBounded(it) }
-            val imported = ExcelWorkbook.importFinance(bytes)
-            money = money + imported
-            saveMoney()
-            info = uiText(language, "${imported.size} Excel rows imported.", "${imported.size} lignes Excel importées.", "تم استيراد ${imported.size} سطر من Excel.")
-        }.onFailure { info = uiText(language, "Could not import this workbook. Check that it is a DailySmart finance file.", "Impossible d’importer ce classeur. Vérifiez qu’il s’agit d’un fichier financier DailySmart.", "تعذر استيراد الملف. تأكد أنه ملف مالي بصيغة DailySmart.") }
+        if (uri != null) {
+            val languageSnapshot = language
+            info = uiText(language, "Reading Excel workbook…", "Lecture du classeur Excel…", "جاري قراءة ملف Excel…")
+            scope.launch {
+                runCatching {
+                    val imported = withContext(Dispatchers.IO) {
+                        val bytes = context.contentResolver.openInputStream(uri)?.use { ExcelWorkbook.readBounded(it) }
+                            ?: throw IllegalStateException("Could not open Excel file.")
+                        withContext(Dispatchers.Default) { ExcelWorkbook.importFinance(bytes) }
+                    }
+                    imported
+                }.onSuccess { imported ->
+                    money = money + imported
+                    saveMoney()
+                    info = uiText(languageSnapshot, "${imported.size} Excel rows imported.", "${imported.size} lignes Excel importées.", "تم استيراد ${imported.size} سطر من Excel.")
+                }.onFailure {
+                    info = uiText(languageSnapshot, "Could not import this workbook. Check that it is a DailySmart finance file.", "Impossible d’importer ce classeur. Vérifiez qu’il s’agit d’un fichier financier DailySmart.", "تعذر استيراد الملف. تأكد أنه ملف مالي بصيغة DailySmart.")
+                }
+            }
+        }
     }
 
+    val localizedConfiguration = remember(language) {
+        Configuration(context.resources.configuration).apply {
+            setLocale(Locale.forLanguageTag(language))
+        }
+    }
     MaterialTheme(colorScheme = darkColorScheme(background = Navy, surface = Panel, primary = Accent, secondary = Teal, onBackground = White, onSurface = White)) {
-      CompositionLocalProvider(LocalLayoutDirection provides if (language == "ar") LayoutDirection.Rtl else LayoutDirection.Ltr) {
+      CompositionLocalProvider(
+          LocalConfiguration provides localizedConfiguration,
+          LocalLayoutDirection provides if (language == "ar") LayoutDirection.Rtl else LayoutDirection.Ltr
+      ) {
+        val editingMoneyItem = money.firstOrNull { it.stableId == editingMoneyId }
+        if (editingMoneyItem != null) {
+            AlertDialog(
+                onDismissRequest = { editingMoneyId = null },
+                title = { Text(uiText(language, "Edit transaction", "Modifier l’opération", "تعديل العملية")) },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        OutlinedTextField(value = editMoneyTitle, onValueChange = { if (it.length <= 500) editMoneyTitle = it }, label = { Text(uiText(language, "Description", "Description", "الوصف")) }, singleLine = true)
+                        OutlinedTextField(value = editMoneyAmount, onValueChange = { editMoneyAmount = it }, label = { Text(uiText(language, "Amount in MAD", "Montant en MAD", "المبلغ بالدرهم")) }, singleLine = true)
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = {
+                        val amount = MoneyAmountParser.parse(editMoneyAmount)
+                        val targetId = editingMoneyId
+                        val targetIndex = money.indexOfFirst { it.stableId == targetId }
+                        if (amount != null && targetIndex >= 0) {
+                            money = money.toMutableList().also { list ->
+                                val current = list[targetIndex]
+                                list[targetIndex] = current.copy(title = editMoneyTitle.trim().ifBlank { current.title }, amount = amount)
+                            }
+                            saveMoney()
+                            editingMoneyId = null
+                            info = uiText(language, "Transaction updated.", "Opération modifiée.", "تحدّثات العملية بنجاح.")
+                        } else {
+                            info = uiText(language, "Enter a valid amount greater than zero.", "Saisissez un montant valide supérieur à zéro.", "دخل مبلغ صحيح أكبر من صفر.")
+                        }
+                    }) { Text(uiText(language, "Save", "Enregistrer", "حفظ")) }
+                },
+                dismissButton = { TextButton(onClick = { editingMoneyId = null }) { Text(uiText(language, "Cancel", "Annuler", "إلغاء")) } }
+            )
+        }
         pendingAssistantAction?.let { action ->
         val actionTitle = when (action) {
             is AssistantAction.AddTask -> uiText(language, "Confirm new task", "Confirmer la tâche", "تأكيد المهمة الجديدة")
@@ -454,7 +644,7 @@ fun DailySmartApp() {
                         Text(uiText(language, "QUICK OVERVIEW", "APERÇU RAPIDE", "نظرة سريعة"), color = Muted, fontSize = 15.sp, fontWeight = FontWeight.Bold)
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                             SummaryCard(uiText(language, "Tasks", "Tâches", "المهام"), "${tasks.count { it.done }}/${tasks.size} ${uiText(language, "done", "terminées", "مكتملة")}", Modifier.weight(1f), Lavender)
-                            SummaryCard(uiText(language, "Balance", "Solde", "الرصيد"), "${"%.0f".format(money.sumOf { if (it.income) it.amount else -it.amount })} DH", Modifier.weight(1f), Accent)
+                            SummaryCard(uiText(language, "Balance", "Solde", "الرصيد"), "${"%.0f".format(financeTotals.third)} DH", Modifier.weight(1f), Accent)
                         }
                         val taskProgress = if (tasks.isEmpty()) 0f else tasks.count { it.done }.toFloat() / tasks.size
                         Spacer(Modifier.height(8.dp))
@@ -496,20 +686,23 @@ fun DailySmartApp() {
                         Spacer(Modifier.height(8.dp))
                         if (tasks.isEmpty()) Text(uiText(language, "No tasks yet. Add one above to get started.", "Aucune tâche pour le moment. Ajoutez-en une ci-dessus.", "ما كايناش مهام دابا. زيد أول مهمة من الفوق."), color = Muted, fontSize = 15.sp, modifier = Modifier.padding(vertical = 14.dp))
                         LazyColumn(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            itemsIndexed(tasks) { i, item ->
+                            items(tasks, key = { it.stableId }) { item ->
                                 Card(colors = CardDefaults.cardColors(containerColor = Panel)) {
-                                    Row(Modifier.fillMaxWidth().clickable { tasks = tasks.toMutableList().also { it[i] = item.copy(done = !item.done) }; saveTasks() }.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    Row(Modifier.fillMaxWidth().clickable {
+                                        tasks = tasks.map { current -> if (current.stableId == item.stableId) current.copy(done = !current.done) else current }
+                                        saveTasks()
+                                    }.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
                                         Icon(if (item.done) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked, null, tint = if (item.done) Accent else Muted)
                                         Spacer(Modifier.width(10.dp)); Text(item.title, modifier = Modifier.weight(1f), color = if (item.done) Muted else White)
-                                        IconButton(onClick = { tasks = tasks.toMutableList().also { it.removeAt(i) }; saveTasks() }) { Icon(Icons.Default.Delete, null, tint = Muted) }
+                                        IconButton(onClick = { tasks = tasks.filterNot { it.stableId == item.stableId }; saveTasks() }) { Icon(Icons.Default.Delete, null, tint = Muted) }
                                     }
                                 }
                             }
                         }
                     }
                     "Finance" -> {
-                        val income = money.filter { it.income }.sumOf { it.amount }
-                        val expense = money.filterNot { it.income }.sumOf { it.amount }
+                        val income = financeTotals.first
+                        val expense = financeTotals.second
                         val analytics = FinanceAnalytics.summarize(money)
                         Text(uiText(language, "PERSONAL FINANCE", "FINANCES PERSONNELLES", "المالية الشخصية"), color = Muted, fontSize = 15.sp, fontWeight = FontWeight.Bold)
                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) { SummaryCard(uiText(language, "Income", "Revenu", "المدخول"), "${"%.2f".format(income)} DH", Modifier.weight(1f), Teal); SummaryCard(uiText(language, "Expenses", "Dépenses", "المصاريف"), "${"%.2f".format(expense)} DH", Modifier.weight(1f), ExpenseColor) }
@@ -619,11 +812,37 @@ fun DailySmartApp() {
                         OutlinedTextField(value = newTitle, onValueChange = { if (it.length <= 500) newTitle = it }, modifier = Modifier.fillMaxWidth(), placeholder = { Text(uiText(language, "Description", "Description", "الوصف")) }, singleLine = true)
                         OutlinedTextField(value = newAmount, onValueChange = { newAmount = it }, modifier = Modifier.fillMaxWidth(), placeholder = { Text(uiText(language, "Amount in MAD", "Montant en MAD", "المبلغ بالدرهم")) }, singleLine = true)
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Button(onClick = { val a = newAmount.replace(",", ".").toDoubleOrNull(); if (a != null && a.isFinite() && a > 0) { money = money + MoneyItem(newTitle.ifBlank { uiText(language, "Income", "Revenu", "مدخول") }, a, true); saveMoney(); newTitle = ""; newAmount = "" } else { info = uiText(language, "Enter a valid amount greater than zero.", "Saisissez un montant valide supérieur à zéro.", "دخل مبلغ صحيح أكبر من صفر.") } }, modifier = Modifier.weight(1f)) { Text(uiText(language, "Add income", "Ajouter un revenu", "إضافة مدخول")) }
+                            Button(onClick = { val a = MoneyAmountParser.parse(newAmount); if (a != null) { money = money + MoneyItem(newTitle.ifBlank { uiText(language, "Income", "Revenu", "مدخول") }, a, true); saveMoney(); newTitle = ""; newAmount = "" } else { info = uiText(language, "Enter a valid amount greater than zero.", "Saisissez un montant valide supérieur à zéro.", "دخل مبلغ صحيح أكبر من صفر.") } }, modifier = Modifier.weight(1f)) { Text(uiText(language, "Add income", "Ajouter un revenu", "إضافة مدخول")) }
                             OutlinedButton(onClick = { val a = newAmount.replace(",", ".").toDoubleOrNull(); if (a != null && a.isFinite() && a > 0) { money = money + MoneyItem(newTitle.ifBlank { uiText(language, "Expense", "Dépense", "مصروف") }, a, false); saveMoney(); newTitle = ""; newAmount = "" } else { info = uiText(language, "Enter a valid amount greater than zero.", "Saisissez un montant valide supérieur à zéro.", "دخل مبلغ صحيح أكبر من صفر.") } }, modifier = Modifier.weight(1f)) { Text(uiText(language, "Add expense", "Ajouter une dépense", "إضافة مصروف")) }
                         }
                         if (money.isEmpty()) Text(uiText(language, "No transactions yet. Add your first income or expense.", "Aucune opération pour le moment.", "ما كايناش عمليات مالية دابا. زيد أول مدخول أو مصروف."), color = Muted, fontSize = 15.sp, modifier = Modifier.padding(vertical = 14.dp))
-                        LazyColumn(modifier = Modifier.weight(1f)) { itemsIndexed(money.reversed()) { index, item -> ListItem(headlineContent = { Text(item.title) }, supportingContent = { Column { Text(if(item.income) uiText(language, "Income", "Revenu", "مدخول") else uiText(language, "Expense", "Dépense", "مصروف"), color = Muted); Text(FinanceAnalytics.dateString(item.createdAt).ifBlank { uiText(language, "Date unavailable", "Date indisponible", "التاريخ غير متوفر") }, color = Muted, fontSize = 15.sp) } }, trailingContent = { Row(verticalAlignment = Alignment.CenterVertically) { Text("${if(item.income) "+" else "-"}${item.amount} DH", color = if(item.income) Teal else ExpenseColor, fontWeight = FontWeight.Bold); IconButton(onClick = { val originalIndex = money.lastIndex - index; money = money.toMutableList().also { it.removeAt(originalIndex) }; saveMoney() }) { Icon(Icons.Default.Delete, uiText(language, "Delete", "Supprimer", "حذف"), tint = Muted) } } }, colors = ListItemDefaults.colors(containerColor = Panel)) } }
+                        LazyColumn(modifier = Modifier.weight(1f)) {
+                            items(displayedMoney, key = { it.stableId }) { item ->
+                                ListItem(
+                                    headlineContent = { Text(item.title) },
+                                    supportingContent = {
+                                        Column {
+                                            Text(if(item.income) uiText(language, "Income", "Revenu", "مدخول") else uiText(language, "Expense", "Dépense", "مصروف"), color = Muted)
+                                            Text(FinanceAnalytics.dateString(item.createdAt).ifBlank { uiText(language, "Date unavailable", "Date indisponible", "التاريخ غير متوفر") }, color = Muted, fontSize = 15.sp)
+                                        }
+                                    },
+                                    trailingContent = {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Text("${if(item.income) "+" else "-"}${item.amount} DH", color = if(item.income) Teal else ExpenseColor, fontWeight = FontWeight.Bold)
+                                            IconButton(onClick = {
+                                                editingMoneyId = item.stableId
+                                                editMoneyTitle = item.title
+                                                editMoneyAmount = item.amount.toString()
+                                            }) { Icon(Icons.Default.Edit, uiText(language, "Edit", "Modifier", "تعديل"), tint = Accent) }
+                                            IconButton(onClick = { money = money.filterNot { it.stableId == item.stableId }; saveMoney() }) {
+                                                Icon(Icons.Default.Delete, uiText(language, "Delete", "Supprimer", "حذف"), tint = Muted)
+                                            }
+                                        }
+                                    },
+                                    colors = ListItemDefaults.colors(containerColor = Panel)
+                                )
+                            }
+                        }
                     }
                     "Habits" -> {
                         Text(uiText(language, "DAILY HABITS", "HABITUDES QUOTIDIENNES", "العادات اليومية"), color = Muted, fontSize = 15.sp, fontWeight = FontWeight.Bold)
@@ -639,13 +858,16 @@ fun DailySmartApp() {
                         Button(onClick = { if (newHabit.isNotBlank()) { habits = habits + HabitItem(newHabit.trim()); saveHabits(); newHabit = "" } }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(14.dp)) { Icon(Icons.Default.Add, null); Spacer(Modifier.width(7.dp)); Text(uiText(language, "Add habit", "Ajouter une habitude", "إضافة عادة")) }
                         if (habits.isEmpty()) Text(uiText(language, "No habits yet. Add one small daily habit.", "Aucune habitude pour le moment.", "ما كايناش عادات دابا. زيد عادة صغيرة كل نهار."), color = Muted, fontSize = 15.sp, modifier = Modifier.padding(vertical = 14.dp))
                         LazyColumn(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            itemsIndexed(habits) { i, habit ->
+                            items(habits, key = { it.stableId }) { habit ->
                                 Card(colors = CardDefaults.cardColors(containerColor = Panel)) {
-                                    Row(Modifier.fillMaxWidth().clickable { habits = habits.toMutableList().also { it[i] = habit.copy(completedToday = !habit.completedToday) }; saveHabits() }.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    Row(Modifier.fillMaxWidth().clickable {
+                                        habits = habits.map { current -> if (current.stableId == habit.stableId) current.copy(completedToday = !current.completedToday) else current }
+                                        saveHabits()
+                                    }.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
                                         Icon(if (habit.completedToday) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked, null, tint = if (habit.completedToday) Accent else Muted)
                                         Spacer(Modifier.width(10.dp))
                                         Text(habit.title, modifier = Modifier.weight(1f), color = if (habit.completedToday) Muted else White)
-                                        IconButton(onClick = { habits = habits.toMutableList().also { it.removeAt(i) }; saveHabits() }) { Icon(Icons.Default.Delete, null, tint = Muted) }
+                                        IconButton(onClick = { habits = habits.filterNot { it.stableId == habit.stableId }; saveHabits() }) { Icon(Icons.Default.Delete, null, tint = Muted) }
                                     }
                                 }
                             }
@@ -735,7 +957,7 @@ fun DailySmartApp() {
                                 }
                                 Divider(color = Muted.copy(alpha = 0.25f))
                                 Text("DailySmart V2", color = White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                                Text(uiText(language, "Version 2.12.0 · Android app", "Version 2.12.0 · Application Android", "الإصدار 2.12.0 · تطبيق أندرويد"), color = Muted, fontSize = 15.sp)
+                                Text(uiText(language, "Version 2.13.0 · Android app", "Version 2.13.0 · Application Android", "الإصدار 2.13.0 · تطبيق أندرويد"), color = Muted, fontSize = 15.sp)
                                 Divider(color = Muted.copy(alpha = 0.25f))
                                 Text(uiText(language, "Currency", "Devise", "العملة"), color = Muted, fontSize = 15.sp)
                                 Text(uiText(language, "Moroccan dirham (MAD)", "Dirham marocain (MAD)", "الدرهم المغربي (MAD)"), color = White)
@@ -757,8 +979,8 @@ fun DailySmartApp() {
                         }
                     }
                     else -> {
-                        val totalIncome = money.filter { it.income }.sumOf { it.amount }
-                        val totalExpense = money.filterNot { it.income }.sumOf { it.amount }
+                        val totalIncome = financeTotals.first
+                        val totalExpense = financeTotals.second
                         val expenseRatio = if (totalIncome > 0.0) (totalExpense / totalIncome).toFloat().coerceIn(0f, 1f) else 0f
                         Text(uiText(language, "SPREADSHEET TOOLS", "OUTILS TABLEUR", "أدوات الجداول"), color = Muted, fontSize = 15.sp, fontWeight = FontWeight.Bold)
                         Text(uiText(language, "FINANCE SNAPSHOT", "APERÇU FINANCIER", "ملخص المالية"), color = Muted, fontSize = 15.sp, fontWeight = FontWeight.Bold)
@@ -779,7 +1001,7 @@ fun DailySmartApp() {
                             Column(Modifier.padding(16.dp)) {
                                 Icon(Icons.Default.TableChart, null, tint = Accent, modifier = Modifier.size(30.dp))
                                 Text(uiText(language, "Excel companion", "Compagnon Excel", "مساعد Excel"), fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                                Text(uiText(language, "Import and export .xlsx finance workbooks, or use CSV for simple data exchange. This version handles transaction type, description and amount; it does not edit arbitrary workbook formulas or charts.", "Importez et exportez des fichiers financiers .xlsx ou CSV. Cette version gère le type, la description et le montant, mais pas les formules ni les graphiques avancés.", "استورد وصدّر ملفات Excel أو CSV المالية. النسخة الحالية تدعم نوع العملية والوصف والمبلغ، ولا تعدل الصيغ والرسوم البيانية المتقدمة."), color = Muted, fontSize = 15.sp)
+                                Text(uiText(language, "Export a multi-sheet .xlsx workspace with a formula-driven dashboard and category/monthly charts when data is available. Import supports DailySmart finance workbooks; arbitrary Excel templates and formulas are not edited.", "Importez et exportez des fichiers financiers .xlsx ou CSV. Cette version gère le type, la description et le montant, mais pas les formules ni les graphiques avancés.", "استورد وصدّر ملفات Excel أو CSV المالية. النسخة الحالية تدعم نوع العملية والوصف والمبلغ، ولا تعدل الصيغ والرسوم البيانية المتقدمة."), color = Muted, fontSize = 15.sp)
                                 Spacer(Modifier.height(14.dp))
                                 Button(onClick = { exportLauncher.launch("dailysmart-finance.csv") }, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Default.FileDownload, null); Spacer(Modifier.width(8.dp)); Text(uiText(language, "Export finance to CSV", "Exporter en CSV", "تصدير CSV")) }
                                 OutlinedButton(onClick = { importLauncher.launch("text/*") }, modifier = Modifier.fillMaxWidth()) { Icon(Icons.Default.FileUpload, null); Spacer(Modifier.width(8.dp)); Text(uiText(language, "Import finance CSV", "Importer CSV", "استيراد CSV")) }
