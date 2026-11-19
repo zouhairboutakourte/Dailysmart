@@ -1,5 +1,6 @@
 package com.dailysmart.app.v2
 
+import android.database.sqlite.SQLiteDatabase
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -65,6 +66,36 @@ class LocalDatabaseTest {
         assertEquals(task.stableId, database.loadTasks().single().stableId)
         assertEquals(transaction.stableId, database.loadMoney().single().stableId)
         assertEquals(habit.stableId, database.loadHabitsForToday("2026-11-19").single().stableId)
+    }
+
+    @Test
+    fun upgradesVersionTwoDatabaseWithoutLosingExistingRecords() {
+        val application = RuntimeEnvironment.getApplication()
+        database.close()
+        application.deleteDatabase("dailysmart_v2.db")
+        val legacy = SQLiteDatabase.openOrCreateDatabase(application.getDatabasePath("dailysmart_v2.db"), null)
+        legacy.execSQL("CREATE TABLE tasks (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT NOT NULL, done INTEGER NOT NULL)")
+        legacy.execSQL("CREATE TABLE money (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT NOT NULL, amount REAL NOT NULL, income INTEGER NOT NULL, created_at INTEGER NOT NULL DEFAULT 0)")
+        legacy.execSQL("CREATE TABLE habits (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT NOT NULL, completed_today INTEGER NOT NULL)")
+        legacy.execSQL("CREATE TABLE metadata (key TEXT PRIMARY KEY NOT NULL, value TEXT NOT NULL)")
+        legacy.execSQL("INSERT INTO tasks(title, done) VALUES('Existing task', 1)")
+        legacy.execSQL("INSERT INTO money(title, amount, income, created_at) VALUES('Existing expense', 42.5, 0, 1234)")
+        legacy.execSQL("INSERT INTO habits(title, completed_today) VALUES('Existing habit', 1)")
+        legacy.version = 2
+        legacy.close()
+
+        database = LocalDatabase(application)
+        val task = database.loadTasks().single()
+        val money = database.loadMoney().single()
+        val habit = database.loadHabitsForToday("2026-11-19").single()
+
+        assertEquals("Existing task", task.title)
+        assertEquals(42.5, money.amount, 0.001)
+        assertEquals(1234L, money.createdAt)
+        assertEquals("Existing habit", habit.title)
+        assertTrue(task.stableId.isNotBlank())
+        assertTrue(money.stableId.isNotBlank())
+        assertTrue(habit.stableId.isNotBlank())
     }
 
     @Test
