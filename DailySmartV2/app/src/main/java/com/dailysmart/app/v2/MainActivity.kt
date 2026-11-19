@@ -64,9 +64,9 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-data class TaskItem(val title: String, val done: Boolean = false)
-data class MoneyItem(val title: String, val amount: Double, val income: Boolean, val createdAt: Long = System.currentTimeMillis())
-data class HabitItem(val title: String, val completedToday: Boolean = false)
+data class TaskItem(val title: String, val done: Boolean = false, val stableId: String = java.util.UUID.randomUUID().toString())
+data class MoneyItem(val title: String, val amount: Double, val income: Boolean, val createdAt: Long = System.currentTimeMillis(), val stableId: String = java.util.UUID.randomUUID().toString())
+data class HabitItem(val title: String, val completedToday: Boolean = false, val stableId: String = java.util.UUID.randomUUID().toString())
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
