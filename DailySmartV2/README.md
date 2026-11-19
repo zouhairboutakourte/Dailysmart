@@ -19,8 +19,8 @@ Independent Android application built with Kotlin and Jetpack Compose.
 - Finance CSV import/export and DailySmart-format XLSX import
 - Workspace XLSX export with Dashboard, Finance, Monthly, Categories, Tasks and Habits sheets according to the selected export scope; dashboard totals use Excel formulas and category/monthly charts are included when matching data exists
 - Settings screen with privacy and feature status
-- Versioned JSON backup and confirmed restore for tasks, finance records, habits, monthly budget and monthly savings target
-- Offline SQLite persistence for tasks, finance records and habits, with a one-time transactional import from existing SharedPreferences records
+- Version 4 JSON backup and confirmed restore for tasks, finance records, habits, monthly budget and monthly savings target; stable record IDs are preserved, and older backups receive IDs when restored
+- Offline SQLite persistence (schema version 3) for tasks, finance records and habits, with stable UUID-style record IDs, an in-place migration from schema version 2, and a one-time transactional import from existing SharedPreferences records
 - No ads, no subscription and no account
 
 ## Gemini setup required before live AI works
