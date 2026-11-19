@@ -244,35 +244,68 @@ fun DailySmartApp() {
     }
 
     val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/csv")) { uri ->
-        if (uri != null) runCatching {
-            context.contentResolver.openOutputStream(uri)?.bufferedWriter()?.use { out ->
-                out.appendLine("type,description,amount,currency,date")
-                money.forEach { out.appendLine("${if (it.income) "income" else "expense"},\"${it.title.replace("\"", "\"\"")}\",${it.amount},MAD,${FinanceAnalytics.dateString(it.createdAt)}") }
+        if (uri != null) {
+            val snapshot = money.toList()
+            val languageSnapshot = language
+            info = uiText(language, "Preparing CSV export…", "Préparation de l’export CSV…", "جاري إعداد ملف CSV…")
+            scope.launch {
+                runCatching {
+                    val csv = withContext(Dispatchers.Default) {
+                        buildString {
+                            appendLine("type,description,amount,currency,date")
+                            snapshot.forEach { item ->
+                                val escapedTitle = item.title.replace("\\\"", "\\\"\\\"")
+                                appendLine("${if (item.income) "income" else "expense"},\"${escapedTitle}\",${item.amount},MAD,${FinanceAnalytics.dateString(item.createdAt)}")
+                            }
+                        }
+                    }
+                    withContext(Dispatchers.IO) {
+                        context.contentResolver.openOutputStream(uri)?.bufferedWriter()?.use { it.write(csv) }
+                            ?: throw IllegalStateException("Could not create CSV file.")
+                    }
+                }.onSuccess {
+                    info = uiText(languageSnapshot, "CSV export created.", "Fichier CSV exporté.", "تم تصدير ملف CSV.")
+                }.onFailure {
+                    info = uiText(languageSnapshot, "Export failed. Please try again.", "Échec de l’exportation. Réessayez.", "فشل التصدير. حاول مرة أخرى.")
+                }
             }
-            info = uiText(language, "CSV export created.", "Fichier CSV exporté.", "تم تصدير ملف CSV.")
-        }.onFailure { info = uiText(language, "Export failed. Please try again.", "Échec de l’exportation. Réessayez.", "فشل التصدير. حاول مرة أخرى.") }
+        }
     }
     val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
-        if (uri != null) runCatching {
-            val csvText = context.contentResolver.openInputStream(uri)?.use { readBoundedText(it, 5 * 1024 * 1024, "CSV") } ?: throw IllegalStateException("Could not open CSV file.")
-            val parsedRows = parseCsv(csvText)
-            val firstRow = parsedRows.firstOrNull().orEmpty().map { it.trim().lowercase() }
-            val hasHeader = firstRow.any { it in listOf("type", "description", "amount", "date", "نوع", "النوع", "الوصف", "المبلغ") }
-            val rows = if (hasHeader) parsedRows.drop(1) else parsedRows
-            val imported = rows.mapNotNull { p ->
-                if (p.size >= 3) {
-                    val amount = MoneyAmountParser.parse(p[2]) ?: return@mapNotNull null
-                    val type = p[0].trim()
-                    val income = listOf("income", "revenu", "recette", "salary", "salaire", "دخل", "راتب").any { type.contains(it, true) }
-                    val description = p[1].trim().trim('"').ifBlank { if (income) "Income" else "Expense" }
-                    if (description.length > 500) return@mapNotNull null
-                    MoneyItem(description, amount, income, FinanceAnalytics.timestampFromDate(p.getOrNull(4).orEmpty()))
-                } else null
+        if (uri != null) {
+            val languageSnapshot = language
+            info = uiText(language, "Reading CSV file…", "Lecture du fichier CSV…", "جاري قراءة ملف CSV…")
+            scope.launch {
+                runCatching {
+                    withContext(Dispatchers.IO) {
+                        val csvText = context.contentResolver.openInputStream(uri)?.use {
+                            readBoundedText(it, 5 * 1024 * 1024, "CSV")
+                        } ?: throw IllegalStateException("Could not open CSV file.")
+                        withContext(Dispatchers.Default) {
+                            val parsedRows = parseCsv(csvText)
+                            val firstRow = parsedRows.firstOrNull().orEmpty().map { it.trim().lowercase() }
+                            val hasHeader = firstRow.any { it in listOf("type", "description", "amount", "date", "نوع", "النوع", "الوصف", "المبلغ") }
+                            val rows = if (hasHeader) parsedRows.drop(1) else parsedRows
+                            rows.mapNotNull { row ->
+                                if (row.size < 3) return@mapNotNull null
+                                val amount = MoneyAmountParser.parse(row[2]) ?: return@mapNotNull null
+                                val type = row[0].trim()
+                                val income = listOf("income", "revenu", "recette", "salary", "salaire", "دخل", "راتب").any { type.contains(it, true) }
+                                val description = row[1].trim().trim('"').ifBlank { if (income) "Income" else "Expense" }
+                                if (description.length > 500) return@mapNotNull null
+                                MoneyItem(description, amount, income, FinanceAnalytics.timestampFromDate(row.getOrNull(4).orEmpty()))
+                            }
+                        }
+                    }
+                }.onSuccess { imported ->
+                    money = money + imported
+                    saveMoney()
+                    info = uiText(languageSnapshot, "${imported.size} CSV rows imported.", "${imported.size} lignes CSV importées.", "تم استيراد ${imported.size} سطر من CSV.")
+                }.onFailure {
+                    info = uiText(languageSnapshot, "Could not read the CSV file. Check its format and size.", "Impossible de lire le CSV. Vérifiez son format et sa taille.", "تعذر قراءة ملف CSV. تحقق من الصيغة والحجم.")
+                }
             }
-            money = money + imported
-            saveMoney()
-            info = uiText(language, "${imported.size} CSV rows imported.", "${imported.size} lignes CSV importées.", "تم استيراد ${imported.size} سطر من CSV.")
-        }.onFailure { info = uiText(language, "Could not read the CSV file. Check its format and size.", "Impossible de lire le CSV. Vérifiez son format et sa taille.", "تعذر قراءة ملف CSV. تحقق من الصيغة والحجم.") }
+        }
     }
 
     val xlsxExportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")) { uri ->
