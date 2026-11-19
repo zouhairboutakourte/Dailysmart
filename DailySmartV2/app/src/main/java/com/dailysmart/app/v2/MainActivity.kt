@@ -44,7 +44,10 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.io.InputStream
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -77,6 +80,8 @@ fun DailySmartApp() {
     val scope = rememberCoroutineScope()
     // Serialize persistence writes off the UI thread to keep rapid edits ordered.
     val databaseDispatcher = remember { Dispatchers.IO.limitedParallelism(1) }
+    // Keep queued writes alive until the database is closed on the same serial dispatcher.
+    val databaseScope = remember(databaseDispatcher) { CoroutineScope(SupervisorJob() + databaseDispatcher) }
     val geminiConfigured = remember { GeminiAssistant.initialize(context) }
     var geminiLoading by remember { mutableStateOf(false) }
     val prefs = remember { context.getSharedPreferences("dailysmart_v2", Context.MODE_PRIVATE) }
@@ -88,8 +93,13 @@ fun DailySmartApp() {
             )
         }
     }
-    DisposableEffect(database) {
-        onDispose { database.close() }
+    DisposableEffect(database, databaseScope) {
+        onDispose {
+            databaseScope.launch {
+                database.close()
+                databaseScope.cancel()
+            }
+        }
     }
     var tasks by remember { mutableStateOf(database.loadTasks()) }
     var money by remember { mutableStateOf(database.loadMoney()) }
@@ -180,7 +190,7 @@ fun DailySmartApp() {
 
     fun saveTasks() {
         val snapshot = tasks.toList()
-        scope.launch(databaseDispatcher) {
+        databaseScope.launch {
             runCatching { database.replaceTasks(snapshot) }
                 .onFailure {
                     withContext(Dispatchers.Main.immediate) {
@@ -191,7 +201,7 @@ fun DailySmartApp() {
     }
     fun saveMoney() {
         val snapshot = money.toList()
-        scope.launch(databaseDispatcher) {
+        databaseScope.launch {
             runCatching { database.replaceMoney(snapshot) }
                 .onFailure {
                     withContext(Dispatchers.Main.immediate) {
@@ -203,7 +213,7 @@ fun DailySmartApp() {
     fun saveHabits() {
         val snapshot = habits.toList()
         val date = todayKey()
-        scope.launch(databaseDispatcher) {
+        databaseScope.launch {
             runCatching { database.replaceHabits(snapshot, date) }
                 .onFailure {
                     withContext(Dispatchers.Main.immediate) {
