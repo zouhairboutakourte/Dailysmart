@@ -7,7 +7,7 @@ Independent Android application built with Kotlin and Jetpack Compose.
 - Dark navy and blue interface with complementary teal, lavender and gold accents
 - Branded launcher icon
 - Arabic is the default UI language, with persistent Arabic/French/English selection and RTL layout
-- Core navigation and several key screens are localized; full interface localization is still in progress
+- App-authored interface labels, dialogs, finance categories, status messages and reminder notification channels are localized in Arabic, French and English; changing the selected language also applies the locale to Compose and Material date/time pickers. User-entered task, habit and transaction names are intentionally preserved as entered.
 - CSV parser supports quoted commas, escaped quotes and multiline descriptions
 - Offline assistant commands in English, French, Arabic and Darija, including Arabizi / Darija written with Latin letters and numerals (3/7/9), for common tasks and finance actions
 - Gemini assistant through Firebase AI Logic when Firebase configuration is supplied; no embedded Gemini API key
@@ -72,7 +72,7 @@ Run this checklist on the actual Android phone before considering the build a be
 - Real-device validation of backup/restore, upgrade from an older installed APK, performance and reminder delivery
 - Multi-step Gemini workflows, editing/deleting records through Gemini, recurring reminders and habit actions; current AI proposals are limited to one new task, one income/expense record, one-time reminder with a clear future date/time, or a local finance report
 - Editing arbitrary Excel workbooks and importing arbitrary Excel sheets; XLSX import currently focuses on DailySmart finance workbooks and the first worksheet
-- Full Arabic, Darija, French and English interface localization
+- Final visual proofreading of every translated screen and system-owned Android file-picker/permission dialog on real devices; system-owned dialogs may follow the Android system language rather than the in-app language
 - Calendar and goals; local one-time reminders are supported
 
 ## Data protection and limits
