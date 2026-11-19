@@ -2,6 +2,7 @@ package com.dailysmart.app.v2
 
 import android.Manifest
 import android.content.Context
+import android.content.res.Configuration
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -29,6 +30,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.LayoutDirection
@@ -382,8 +384,16 @@ fun DailySmartApp() {
         }
     }
 
+    val localizedConfiguration = remember(language) {
+        Configuration(context.resources.configuration).apply {
+            setLocale(Locale.forLanguageTag(language))
+        }
+    }
     MaterialTheme(colorScheme = darkColorScheme(background = Navy, surface = Panel, primary = Accent, secondary = Teal, onBackground = White, onSurface = White)) {
-      CompositionLocalProvider(LocalLayoutDirection provides if (language == "ar") LayoutDirection.Rtl else LayoutDirection.Ltr) {
+      CompositionLocalProvider(
+          LocalConfiguration provides localizedConfiguration,
+          LocalLayoutDirection provides if (language == "ar") LayoutDirection.Rtl else LayoutDirection.Ltr
+      ) {
         val editingMoneyItem = money.firstOrNull { it.stableId == editingMoneyId }
         if (editingMoneyItem != null) {
             AlertDialog(
