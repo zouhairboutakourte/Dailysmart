@@ -6,7 +6,7 @@ import org.json.JSONObject
 /** Versioned, validated JSON backup for all user-owned DailySmart records. */
 object BackupCodec {
     const val MAX_BACKUP_BYTES = 2 * 1024 * 1024
-    private const val VERSION = 3
+    private const val VERSION = 4
     private const val MAX_RECORDS_PER_SECTION = 10_000
     private const val MAX_TITLE_LENGTH = 500
 
@@ -24,16 +24,16 @@ object BackupCodec {
         val root = JSONObject().put("app", "DailySmart").put("version", VERSION)
             .put("createdAt", System.currentTimeMillis())
         root.put("tasks", JSONArray().apply {
-            tasks.forEach { put(JSONObject().put("title", clean(it.title)).put("done", it.done)) }
+            tasks.forEach { put(JSONObject().put("id", cleanId(it.stableId)).put("title", clean(it.title)).put("done", it.done)) }
         })
         root.put("money", JSONArray().apply {
             money.forEach {
                 require(it.amount.isFinite() && it.amount > 0.0) { "Invalid finance amount in current data." }
-                put(JSONObject().put("title", clean(it.title)).put("amount", it.amount).put("income", it.income).put("createdAt", it.createdAt))
+                put(JSONObject().put("id", cleanId(it.stableId)).put("title", clean(it.title)).put("amount", it.amount).put("income", it.income).put("createdAt", it.createdAt))
             }
         })
         root.put("habits", JSONArray().apply {
-            habits.forEach { put(JSONObject().put("title", clean(it.title)).put("completedToday", it.completedToday)) }
+            habits.forEach { put(JSONObject().put("id", cleanId(it.stableId)).put("title", clean(it.title)).put("completedToday", it.completedToday)) }
         })
         monthlyBudget?.let { require(it.isFinite() && it > 0.0); root.put("monthlyBudget", it) }
         monthlySavingsGoal?.let { require(it.isFinite() && it > 0.0); root.put("monthlySavingsGoal", it) }
@@ -59,21 +59,27 @@ object BackupCodec {
 
         val tasks = (0 until tasksArray.length()).map { i ->
             val item = tasksArray.getJSONObject(i)
-            TaskItem(clean(item.getString("title")), item.optBoolean("done", false))
+            TaskItem(clean(item.getString("title")), item.optBoolean("done", false), cleanId(item.optString("id").ifBlank { java.util.UUID.randomUUID().toString() }))
         }
         val money = (0 until moneyArray.length()).map { i ->
             val item = moneyArray.getJSONObject(i)
             val amount = item.getDouble("amount")
             require(amount.isFinite() && amount > 0.0) { "Backup contains an invalid amount." }
-            MoneyItem(clean(item.getString("title")), amount, item.getBoolean("income"), item.optLong("createdAt", 0L))
+            MoneyItem(clean(item.getString("title")), amount, item.getBoolean("income"), item.optLong("createdAt", 0L), cleanId(item.optString("id").ifBlank { java.util.UUID.randomUUID().toString() }))
         }
         val habits = (0 until habitsArray.length()).map { i ->
             val item = habitsArray.getJSONObject(i)
-            HabitItem(clean(item.getString("title")), item.optBoolean("completedToday", false))
+            HabitItem(clean(item.getString("title")), item.optBoolean("completedToday", false), cleanId(item.optString("id").ifBlank { java.util.UUID.randomUUID().toString() }))
         }
         val monthlyBudget = if (root.has("monthlyBudget")) root.getDouble("monthlyBudget").also { require(it.isFinite() && it > 0.0) } else null
         val monthlySavingsGoal = if (root.has("monthlySavingsGoal")) root.getDouble("monthlySavingsGoal").also { require(it.isFinite() && it > 0.0) } else null
         return Snapshot(tasks, money, habits, monthlyBudget, monthlySavingsGoal)
+    }
+
+    private fun cleanId(value: String): String {
+        val result = value.trim()
+        require(result.isNotEmpty() && result.length <= 64) { "Record IDs must contain 1 to 64 characters." }
+        return result
     }
 
     private fun clean(value: String): String {
