@@ -44,7 +44,9 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.io.InputStream
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 private val Navy = Color(0xFF071A33)
 private val Panel = Color(0xFF0D2948)
@@ -73,6 +75,8 @@ data class HabitItem(val title: String, val completedToday: Boolean = false, val
 fun DailySmartApp() {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    // Serialize persistence writes off the UI thread to keep rapid edits ordered.
+    val databaseDispatcher = remember { Dispatchers.IO.limitedParallelism(1) }
     val geminiConfigured = remember { GeminiAssistant.initialize(context) }
     var geminiLoading by remember { mutableStateOf(false) }
     val prefs = remember { context.getSharedPreferences("dailysmart_v2", Context.MODE_PRIVATE) }
@@ -174,9 +178,40 @@ fun DailySmartApp() {
         }.onFailure { info = uiText(language, "Restore failed. The file may be invalid.", "Échec de la restauration. Le fichier est peut-être invalide.", "فشل الاسترجاع. ربما الملف غير صالح.") }
     }
 
-    fun saveTasks() { database.replaceTasks(tasks) }
-    fun saveMoney() { database.replaceMoney(money) }
-    fun saveHabits() { database.replaceHabits(habits, todayKey()) }
+    fun saveTasks() {
+        val snapshot = tasks.toList()
+        scope.launch(databaseDispatcher) {
+            runCatching { database.replaceTasks(snapshot) }
+                .onFailure {
+                    withContext(Dispatchers.Main.immediate) {
+                        info = uiText(language, "Could not save tasks. Please try again.", "Impossible d’enregistrer les tâches. Réessayez.", "تعذر حفظ المهام. حاول مرة أخرى.")
+                    }
+                }
+        }
+    }
+    fun saveMoney() {
+        val snapshot = money.toList()
+        scope.launch(databaseDispatcher) {
+            runCatching { database.replaceMoney(snapshot) }
+                .onFailure {
+                    withContext(Dispatchers.Main.immediate) {
+                        info = uiText(language, "Could not save finance records. Please try again.", "Impossible d’enregistrer les opérations. Réessayez.", "تعذر حفظ العمليات المالية. حاول مرة أخرى.")
+                    }
+                }
+        }
+    }
+    fun saveHabits() {
+        val snapshot = habits.toList()
+        val date = todayKey()
+        scope.launch(databaseDispatcher) {
+            runCatching { database.replaceHabits(snapshot, date) }
+                .onFailure {
+                    withContext(Dispatchers.Main.immediate) {
+                        info = uiText(language, "Could not save habits. Please try again.", "Impossible d’enregistrer les habitudes. Réessayez.", "تعذر حفظ العادات. حاول مرة أخرى.")
+                    }
+                }
+        }
+    }
     fun showFinanceReport() {
         val totalIncome = money.filter { it.income }.sumOf { it.amount }
         val totalExpense = money.filterNot { it.income }.sumOf { it.amount }
@@ -186,6 +221,8 @@ fun DailySmartApp() {
     LaunchedEffect(Unit) {
         ReminderManager.rescheduleAll(context)
     }
+    val displayedMoney = remember(money) { money.asReversed() }
+
     LaunchedEffect(tab) {
         if (tab == "Reminders") reminders = ReminderManager.load(context)
     }
@@ -663,7 +700,7 @@ fun DailySmartApp() {
                         }
                         if (money.isEmpty()) Text(uiText(language, "No transactions yet. Add your first income or expense.", "Aucune opération pour le moment.", "ما كايناش عمليات مالية دابا. زيد أول مدخول أو مصروف."), color = Muted, fontSize = 15.sp, modifier = Modifier.padding(vertical = 14.dp))
                         LazyColumn(modifier = Modifier.weight(1f)) {
-                            items(money.reversed(), key = { it.stableId }) { item ->
+                            items(displayedMoney, key = { it.stableId }) { item ->
                                 ListItem(
                                     headlineContent = { Text(item.title) },
                                     supportingContent = {
