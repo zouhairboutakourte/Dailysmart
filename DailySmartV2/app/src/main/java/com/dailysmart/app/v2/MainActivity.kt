@@ -232,6 +232,12 @@ fun DailySmartApp() {
         ReminderManager.rescheduleAll(context)
     }
     val displayedMoney = remember(money) { money.asReversed() }
+    // Reuse finance aggregates across unrelated UI recompositions (typing, tab changes, dialogs).
+    val financeTotals = remember(money) {
+        val income = money.asSequence().filter { it.income }.sumOf { it.amount }
+        val expenses = money.asSequence().filterNot { it.income }.sumOf { it.amount }
+        Triple(income, expenses, income - expenses)
+    }
 
     LaunchedEffect(tab) {
         if (tab == "Reminders") reminders = ReminderManager.load(context)
@@ -537,7 +543,7 @@ fun DailySmartApp() {
                         Text(uiText(language, "QUICK OVERVIEW", "APERÇU RAPIDE", "نظرة سريعة"), color = Muted, fontSize = 15.sp, fontWeight = FontWeight.Bold)
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                             SummaryCard(uiText(language, "Tasks", "Tâches", "المهام"), "${tasks.count { it.done }}/${tasks.size} ${uiText(language, "done", "terminées", "مكتملة")}", Modifier.weight(1f), Lavender)
-                            SummaryCard(uiText(language, "Balance", "Solde", "الرصيد"), "${"%.0f".format(money.sumOf { if (it.income) it.amount else -it.amount })} DH", Modifier.weight(1f), Accent)
+                            SummaryCard(uiText(language, "Balance", "Solde", "الرصيد"), "${"%.0f".format(financeTotals.third)} DH", Modifier.weight(1f), Accent)
                         }
                         val taskProgress = if (tasks.isEmpty()) 0f else tasks.count { it.done }.toFloat() / tasks.size
                         Spacer(Modifier.height(8.dp))
@@ -594,8 +600,8 @@ fun DailySmartApp() {
                         }
                     }
                     "Finance" -> {
-                        val income = money.filter { it.income }.sumOf { it.amount }
-                        val expense = money.filterNot { it.income }.sumOf { it.amount }
+                        val income = financeTotals.first
+                        val expense = financeTotals.second
                         val analytics = FinanceAnalytics.summarize(money)
                         Text(uiText(language, "PERSONAL FINANCE", "FINANCES PERSONNELLES", "المالية الشخصية"), color = Muted, fontSize = 15.sp, fontWeight = FontWeight.Bold)
                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) { SummaryCard(uiText(language, "Income", "Revenu", "المدخول"), "${"%.2f".format(income)} DH", Modifier.weight(1f), Teal); SummaryCard(uiText(language, "Expenses", "Dépenses", "المصاريف"), "${"%.2f".format(expense)} DH", Modifier.weight(1f), ExpenseColor) }
@@ -872,8 +878,8 @@ fun DailySmartApp() {
                         }
                     }
                     else -> {
-                        val totalIncome = money.filter { it.income }.sumOf { it.amount }
-                        val totalExpense = money.filterNot { it.income }.sumOf { it.amount }
+                        val totalIncome = financeTotals.first
+                        val totalExpense = financeTotals.second
                         val expenseRatio = if (totalIncome > 0.0) (totalExpense / totalIncome).toFloat().coerceIn(0f, 1f) else 0f
                         Text(uiText(language, "SPREADSHEET TOOLS", "OUTILS TABLEUR", "أدوات الجداول"), color = Muted, fontSize = 15.sp, fontWeight = FontWeight.Bold)
                         Text(uiText(language, "FINANCE SNAPSHOT", "APERÇU FINANCIER", "ملخص المالية"), color = Muted, fontSize = 15.sp, fontWeight = FontWeight.Bold)
