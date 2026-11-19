@@ -26,11 +26,47 @@ Independent Android application built with Kotlin and Jetpack Compose.
 ## Gemini setup required before live AI works
 1. Create a Firebase project in the Firebase Console and register an Android app with package ID `com.dailysmart.app.v2`.
 2. In **AI Services → AI Logic**, select **Get started** and choose **Gemini Developer API**.
-3. Download the Android `google-services.json` file and place it at `DailySmartV2/app/google-services.json` in the repository. This is Firebase client configuration, not a Gemini API key; never add a Gemini API key to the app.
+3. Download the Android `google-services.json` file. For local testing, place it at `DailySmartV2/app/google-services.json`. For GitHub Actions, store its Base64 contents as the protected Actions secret `FIREBASE_GOOGLE_SERVICES_JSON_BASE64`; do not commit the file. This is Firebase client configuration, not a Gemini API key; never add a Gemini API key to the app.
 4. For debug testing, launch the app and register the App Check debug token shown in Android logs under **Firebase Console → App Check → Apps → Manage debug tokens**. Keep AI Logic App Check enforcement enabled.
 5. For Play Store builds, register Play Integrity for App Check and use the Play signing certificate fingerprints.
 
 The app build remains possible without `google-services.json`, but Gemini stays disabled until Firebase configuration is added. The assistant sends only the typed prompt to Gemini; it never uploads the user's finance ledger, tasks or habits. Gemini can propose one new task, one income/expense record, one-time reminder or a finance report. The app validates each proposed action and requires the user to confirm before adding a task, transaction or reminder; finance totals are calculated locally. Reminder schedules remain on-device and are not sent to Gemini.
+
+## Secure signed release build
+The normal pull-request workflow builds and tests a debug APK. A signed release APK and Play Store AAB are produced only when a repository maintainer manually runs the workflow with the `release` input enabled and all required Actions secrets configured.
+
+Required GitHub repository secrets (Settings → Secrets and variables → Actions):
+- `FIREBASE_GOOGLE_SERVICES_JSON_BASE64`: Base64-encoded contents of the Firebase Android `google-services.json` for package `com.dailysmart.app.v2`.
+- `ANDROID_KEYSTORE_BASE64`: Base64-encoded upload keystore file.
+- `ANDROID_KEYSTORE_PASSWORD`: upload keystore password.
+- `ANDROID_KEY_ALIAS`: upload key alias.
+- `ANDROID_KEY_PASSWORD`: upload key password.
+
+Generate a dedicated upload key locally and keep a secure offline backup. Never send the keystore or its passwords in chat, commit them to Git, or reuse a personal certificate. On Windows PowerShell, generate the key with:
+
+```powershell
+keytool -genkeypair -v -keystore dailysmart-upload.jks -keyalg RSA -keysize 2048 -validity 10000 -alias dailysmart-upload
+[Convert]::ToBase64String([IO.File]::ReadAllBytes("dailysmart-upload.jks")) | Set-Clipboard
+```
+
+Paste the clipboard value into `ANDROID_KEYSTORE_BASE64`. Convert Firebase config similarly after downloading it:
+
+```powershell
+[Convert]::ToBase64String([IO.File]::ReadAllBytes("google-services.json")) | Set-Clipboard
+```
+
+Paste that value into `FIREBASE_GOOGLE_SERVICES_JSON_BASE64`. Add the three remaining keystore values as separate Actions secrets. Then open **Actions → Build DailySmart V2 Native → Run workflow**, select this feature branch, enable the `release` input, and run it. The `DailySmart-V2-Signed-Release` artifact contains both the signed APK for direct device testing and the AAB for Play Console. Keep the same upload key for all future updates; changing it can prevent normal updates unless the Play Console upload-key reset process is used.
+
+## Real-device acceptance checklist
+Run this checklist on the actual Android phone before considering the build a beta candidate:
+- Install the debug APK alongside the previous app; verify the package remains `com.dailysmart.app.v2`.
+- Add, edit, complete and delete tasks, habits, income and expenses; force-close and reopen; confirm records remain.
+- Export CSV and XLSX; open both in Excel or Google Sheets; verify formulas, totals, chart data and Arabic/French text; import a DailySmart workbook and confirm no duplicate or lost records.
+- Create a reminder with notifications allowed; test delivery while app is backgrounded, after force-stop if supported by Android, and after device reboot. Android battery optimization may delay inexact alarms.
+- Switch Arabic / French / English; verify labels, dialogs, date/time controls, RTL layout, and app restart persistence.
+- Measure scrolling and startup on the phone; check crash-free behavior and battery use.
+- Test backup and restore using a disposable test dataset before restoring any real personal data.
+- Test a signed release APK installed from the build artifact and verify Gemini through Firebase App Check. For Play Integrity production testing, use a Play internal-testing installation and register the Play signing certificate in Firebase App Check.
 
 ## Not yet implemented / validation still required
 - Real-device validation of backup/restore, upgrade from an older installed APK, performance and reminder delivery
