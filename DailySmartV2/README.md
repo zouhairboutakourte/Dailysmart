@@ -2,7 +2,7 @@
 
 Independent Android application built with Kotlin and Jetpack Compose.
 
-## Implemented in version 2.12.0
+## Implemented in version 2.13.0
 - Separate package: `com.dailysmart.app.v2`
 - Premium light interface with a soft blue-white background, white cards, indigo-to-violet gradient hero, mint highlights, refreshed navigation and a redesigned branded launcher icon
 - Branded launcher icon
@@ -14,6 +14,8 @@ Independent Android application built with Kotlin and Jetpack Compose.
 - Gemini assistant through Firebase AI Logic; understands Arabic-script Darija and Latin-script Arabizi, and can propose one task, expense, income, one-time reminder or finance report from natural language, with explicit confirmation before adding records; uses Firebase App Check and no embedded Gemini API key
 - Finance ledger: income, expenses and MAD balance
 - Finance insights: week/month income and expense totals, month-to-date savings/overspending signal, ranked category breakdown with visual bars, transaction dates, persistent monthly spending budget and savings target with progress/over-budget feedback
+- Monthly income and expense comparisons with visual bars in exported finance reports
+- Excel export writes user-provided text as text cells to reduce spreadsheet formula-injection risk
 - Task list: add, complete and delete
 - Habits: add, daily check-off, reset checkmarks and delete
 - Device-local one-time reminders with date/time selection, notifications and rescheduling after device reboot
@@ -35,7 +37,7 @@ The app build remains possible without `google-services.json`, but Gemini stays 
 ## Not yet implemented
 - Real-device validation of backup/restore, upgrade from an older installed APK and performance is still required
 - Multi-step Gemini workflows, editing/deleting records through Gemini, recurring reminders and habit actions are not implemented; current AI proposals are limited to one new task, one income/expense record, one-time reminder with a clear future date/time, or a local finance report. Reminders can also be created manually in the Reminders tab.
-- Editing arbitrary Excel workbooks, formulas and charts; XLSX support currently focuses on DailySmart finance transaction sheets
+- Editing arbitrary Excel workbooks and importing arbitrary spreadsheet formulas/charts; XLSX support currently focuses on DailySmart finance transaction sheets and the app's own reports
 - Full Arabic, Darija, French and English interface localization
 - Calendar and goals; local one-time reminders are now supported
 
