@@ -46,11 +46,11 @@ import java.util.Locale
 import java.io.InputStream
 import kotlinx.coroutines.launch
 
-private val Navy = Color(0xFF071A33)
-private val Panel = Color(0xFF0D2948)
-private val PanelRaised = Color(0xFF12395F)
-private val Accent = Color(0xFF3B9CFF)
-private val Lavender = Color(0xFF80C4FF)
+private val Navy = Color(0xFF0A0F1D)
+private val Panel = Color(0xFF131C31)
+private val PanelRaised = Color(0xFF1B2942)
+private val Accent = Color(0xFF00E5FF)
+private val Lavender = Color(0xFF72DDF0)
 private val Gold = Color(0xFFFFC857)
 private val Teal = Color(0xFF35D0BA)
 private val ExpenseColor = Color(0xFFFF718B)
@@ -66,6 +66,9 @@ class MainActivity : ComponentActivity() {
 
 data class TaskItem(val title: String, val done: Boolean = false)
 data class MoneyItem(val title: String, val amount: Double, val income: Boolean, val createdAt: Long = System.currentTimeMillis())
+
+// Legacy anomalies remain stored for audit/recovery but are excluded from financial totals.
+private fun MoneyItem.countsInFinancialTotals(): Boolean = amount.isFinite() && amount >= 0.005
 data class HabitItem(val title: String, val completedToday: Boolean = false)
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -175,8 +178,8 @@ fun DailySmartApp() {
     fun saveMoney() { database.replaceMoney(money) }
     fun saveHabits() { database.replaceHabits(habits, todayKey()) }
     fun showFinanceReport() {
-        val totalIncome = money.filter { it.income }.sumOf { it.amount }
-        val totalExpense = money.filterNot { it.income }.sumOf { it.amount }
+        val totalIncome = money.filter { it.income && it.countsInFinancialTotals() }.sumOf { it.amount }
+        val totalExpense = money.filter { !it.income && it.countsInFinancialTotals() }.sumOf { it.amount }
         val balance = totalIncome - totalExpense
         info = "${uiText(language, "Finance report", "Rapport financier", "التقرير المالي")} · ${uiText(language, "Income", "Revenu", "المداخيل")}: ${"%.2f".format(totalIncome)} MAD · ${uiText(language, "Expenses", "Dépenses", "المصاريف")}: ${"%.2f".format(totalExpense)} MAD · ${uiText(language, "Balance", "Solde", "الرصيد")}: ${"%.2f".format(balance)} MAD"
     }
@@ -353,15 +356,15 @@ fun DailySmartApp() {
                 listOf("Assistant", "Finance", "Tasks", "Habits", "Reminders").forEach { name ->
                     NavigationBarItem(selected = tab == name, onClick = { tab = name }, icon = {
                         Icon(when(name) { "Assistant" -> Icons.Default.AutoAwesome; "Finance" -> Icons.Default.AccountBalanceWallet; "Tasks" -> Icons.Default.CheckCircle; "Habits" -> Icons.Default.Favorite; "Reminders" -> Icons.Default.Notifications; "Excel" -> Icons.Default.TableChart; else -> Icons.Default.Settings }, null)
-                    }, label = { Text(uiText(language, name, when(name) { "Assistant" -> "Assistant"; "Finance" -> "Finances"; "Tasks" -> "Tâches"; "Habits" -> "Habitudes"; "Reminders" -> "Rappels"; "Excel" -> "Excel"; else -> "Paramètres" }, when(name) { "Assistant" -> "المساعد"; "Finance" -> "المالية"; "Tasks" -> "المهام"; "Habits" -> "العادات"; "Reminders" -> "التذكيرات"; "Excel" -> "إكسيل"; else -> "الإعدادات" })) }, colors = NavigationBarItemDefaults.colors(selectedIconColor = Accent, selectedTextColor = Accent, indicatorColor = Color(0xFF174A78), unselectedTextColor = Muted))
+                    }, label = { Text(uiText(language, name, when(name) { "Assistant" -> "Assistant"; "Finance" -> "Finances"; "Tasks" -> "Tâches"; "Habits" -> "Habitudes"; "Reminders" -> "Rappels"; "Excel" -> "Excel"; else -> "Paramètres" }, when(name) { "Assistant" -> "المساعد"; "Finance" -> "المالية"; "Tasks" -> "المهام"; "Habits" -> "العادات"; "Reminders" -> "التذكيرات"; "Excel" -> "إكسيل"; else -> "الإعدادات" })) }, colors = NavigationBarItemDefaults.colors(selectedIconColor = Accent, selectedTextColor = Accent, indicatorColor = Color(0xFF20334F), unselectedTextColor = Muted))
                 }
             }
         }) { pad ->
-            Column(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Navy, Color(0xFF0B2442), Color(0xFF081D36)))).padding(pad).padding(horizontal = 18.dp).then(if (tab == "Assistant" || tab == "Excel" || tab == "Settings" || tab == "Reminders") Modifier.verticalScroll(rememberScrollState()) else Modifier)) {
+            Column(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Navy, Color(0xFF0D1729), Color(0xFF0A0F1D)))).padding(pad).padding(horizontal = 18.dp).then(if (tab == "Assistant" || tab == "Excel" || tab == "Settings" || tab == "Reminders") Modifier.verticalScroll(rememberScrollState()) else Modifier)) {
                 Spacer(Modifier.height(14.dp))
                 Box(
                     Modifier.fillMaxWidth().clip(RoundedCornerShape(26.dp))
-                        .background(Brush.linearGradient(listOf(Color(0xFF145DA0), Color(0xFF1976D2), Color(0xFF42A5F5))))
+                        .background(Brush.linearGradient(listOf(Color(0xFF12324A), Color(0xFF0E5267), Accent)))
                         .padding(18.dp)
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -454,7 +457,7 @@ fun DailySmartApp() {
                         Text(uiText(language, "QUICK OVERVIEW", "APERÇU RAPIDE", "نظرة سريعة"), color = Muted, fontSize = 15.sp, fontWeight = FontWeight.Bold)
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                             SummaryCard(uiText(language, "Tasks", "Tâches", "المهام"), "${tasks.count { it.done }}/${tasks.size} ${uiText(language, "done", "terminées", "مكتملة")}", Modifier.weight(1f), Lavender)
-                            SummaryCard(uiText(language, "Balance", "Solde", "الرصيد"), "${"%.0f".format(money.sumOf { if (it.income) it.amount else -it.amount })} DH", Modifier.weight(1f), Accent)
+                            SummaryCard(uiText(language, "Balance", "Solde", "الرصيد"), "${"%.0f".format(money.filter { it.countsInFinancialTotals() }.sumOf { if (it.income) it.amount else -it.amount })} DH", Modifier.weight(1f), Accent)
                         }
                         val taskProgress = if (tasks.isEmpty()) 0f else tasks.count { it.done }.toFloat() / tasks.size
                         Spacer(Modifier.height(8.dp))
@@ -472,7 +475,7 @@ fun DailySmartApp() {
                         }
                         Spacer(Modifier.height(12.dp))
                         val dailyQuote = DailyQuoteProvider.quoteFor(java.time.LocalDate.now().dayOfYear, language)
-                        Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF12395F)), shape = RoundedCornerShape(18.dp)) {
+                        Card(colors = CardDefaults.cardColors(containerColor = PanelRaised), shape = RoundedCornerShape(18.dp)) {
                             Column(Modifier.fillMaxWidth().padding(15.dp)) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Icon(Icons.Default.FormatQuote, null, tint = Gold)
