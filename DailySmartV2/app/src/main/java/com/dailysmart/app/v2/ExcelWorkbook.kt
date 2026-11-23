@@ -87,7 +87,7 @@ object ExcelWorkbook {
         }
         if(scope=="all"||scope=="finance"){
             val income=exportItems.filter{it.income}.sumOf{it.amount}; val expense=exportItems.filterNot{it.income}.sumOf{it.amount}
-            val cats=items.filterNot{it.income}.groupBy{FinanceAnalytics.categoryFor(it.title)}.mapValues{it.value.sumOf{m->m.amount}}.toList().sortedByDescending{it.second}
+            val cats=exportItems.filterNot{it.income}.groupBy{FinanceAnalytics.categoryFor(it.title)}.mapValues{it.value.sumOf{m->m.amount}}.toList().sortedByDescending{it.second}
             val dash=mutableListOf(listOf("DailySmart Dashboard"),listOf("Generated",java.time.LocalDate.now().toString()),listOf("Income MAD",income.toString()),listOf("Expenses MAD",expense.toString()),listOf("Net balance MAD",(income-expense).toString()),listOf("Transactions",exportItems.size.toString()),listOf("Top category",cats.firstOrNull()?.first?:"—"),listOf("Category","Expenses MAD","Visual bar"))
             val maxCategory=cats.maxOfOrNull{it.second}?:0.0; cats.forEach{p->dash+=listOf(p.first,p.second.toString(),"█".repeat(if(maxCategory>0)(p.second/maxCategory*20).toInt().coerceAtLeast(1) else 0))}
             sheets+=makeSheet("Dashboard",dash)
