@@ -511,8 +511,8 @@ fun DailySmartApp() {
                         }
                     }
                     "Finance" -> {
-                        val income = money.filter { it.income }.sumOf { it.amount }
-                        val expense = money.filterNot { it.income }.sumOf { it.amount }
+                        val income = money.filter { it.income && it.countsInFinancialTotals() }.sumOf { it.amount }
+                        val expense = money.filter { !it.income && it.countsInFinancialTotals() }.sumOf { it.amount }
                         val analytics = FinanceAnalytics.summarize(money)
                         Text(uiText(language, "PERSONAL FINANCE", "FINANCES PERSONNELLES", "المالية الشخصية"), color = Muted, fontSize = 15.sp, fontWeight = FontWeight.Bold)
                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) { SummaryCard(uiText(language, "Income", "Revenu", "المدخول"), "${"%.2f".format(income)} DH", Modifier.weight(1f), Teal); SummaryCard(uiText(language, "Expenses", "Dépenses", "المصاريف"), "${"%.2f".format(expense)} DH", Modifier.weight(1f), ExpenseColor) }
@@ -760,8 +760,8 @@ fun DailySmartApp() {
                         }
                     }
                     else -> {
-                        val totalIncome = money.filter { it.income }.sumOf { it.amount }
-                        val totalExpense = money.filterNot { it.income }.sumOf { it.amount }
+                        val totalIncome = money.filter { it.income && it.countsInFinancialTotals() }.sumOf { it.amount }
+                        val totalExpense = money.filter { !it.income && it.countsInFinancialTotals() }.sumOf { it.amount }
                         val expenseRatio = if (totalIncome > 0.0) (totalExpense / totalIncome).toFloat().coerceIn(0f, 1f) else 0f
                         Text(uiText(language, "SPREADSHEET TOOLS", "OUTILS TABLEUR", "أدوات الجداول"), color = Muted, fontSize = 15.sp, fontWeight = FontWeight.Bold)
                         Text(uiText(language, "FINANCE SNAPSHOT", "APERÇU FINANCIER", "ملخص المالية"), color = Muted, fontSize = 15.sp, fontWeight = FontWeight.Bold)
