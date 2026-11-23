@@ -29,19 +29,38 @@ class LocalDatabaseTest {
     @Test
     fun migratesLegacyRecordsOnlyOnce() {
         val tasks = listOf(TaskItem("Pay bill", true), TaskItem("Buy groceries", false))
-        val money = listOf(MoneyItem("Salary", 8500.0, true), MoneyItem("Invalid", Double.NaN, false))
+        val money = listOf(
+            MoneyItem("Salary", 8500.0, true),
+            MoneyItem("Legacy sub-cent", 0.0049, false),
+            MoneyItem("Legacy zero", 0.0, false),
+            MoneyItem("Legacy negative", -12.5, false)
+        )
         val habits = listOf(HabitItem("Water", true), HabitItem("Read", false))
 
         database.migrateLegacyOnce(tasks, money, habits, "2026-11-11")
 
         assertEquals(tasks, database.loadTasks())
-        assertEquals(listOf(MoneyItem("Salary", 8500.0, true, 0L)), database.loadMoney())
+        assertEquals(money.map { it.copy(createdAt = 0L) }, database.loadMoney())
         assertEquals(habits, database.loadHabitsForToday("2026-11-11"))
 
         database.migrateLegacyOnce(listOf(TaskItem("Replacement")), emptyList(), emptyList(), "2026-11-12")
 
         assertEquals(tasks, database.loadTasks())
         assertEquals(listOf(MoneyItem("Salary", 8500.0, true, 0L)), database.loadMoney())
+    }
+
+
+    @Test
+    fun nonFiniteReplacementIsRejectedWithoutDeletingExistingMoney() {
+        val original = listOf(MoneyItem("Salary", 8500.0, true))
+        database.replaceMoney(original)
+
+        val failure = runCatching {
+            database.replaceMoney(listOf(MoneyItem("Corrupt", Double.NaN, false)))
+        }
+
+        assertTrue(failure.isFailure)
+        assertEquals(original, database.loadMoney())
     }
 
     @Test
