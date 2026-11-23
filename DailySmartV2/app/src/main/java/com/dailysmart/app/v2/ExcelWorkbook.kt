@@ -35,7 +35,11 @@ object ExcelWorkbook {
         return output.toByteArray()
     }
 
+    private fun exportableMoney(items: List<MoneyItem>): List<MoneyItem> =
+        items.filter { it.amount.isFinite() && it.amount >= 0.005 }
+
     fun exportFinance(items: List<MoneyItem>): ByteArray {
+        val exportItems = exportableMoney(items)
         val out = ByteArrayOutputStream()
         ZipOutputStream(out).use { zip ->
             put(zip, "[Content_Types].xml", """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
@@ -61,7 +65,7 @@ object ExcelWorkbook {
                 append("""<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>""")
                 val headers = listOf("Type", "Description", "Amount", "Currency", "Date")
                 appendRow(1, headers.mapIndexed { i, v -> cell(i, 1, v) }.joinToString(""))
-                items.forEachIndexed { index, item ->
+                exportItems.forEachIndexed { index, item ->
                     val row = index + 2
                     val type = if (item.income) "Income" else "Expense"
                     appendRow(row, cell(0, row, type) + cell(1, row, item.title) +
@@ -76,18 +80,19 @@ object ExcelWorkbook {
 
     /** Multi-sheet workbook assembled locally from app records. */
     fun exportWorkspace(items: List<MoneyItem>, tasks: List<TaskItem>, habits: List<HabitItem>, scope: String, language: String): ByteArray {
+        val exportItems = exportableMoney(items)
         val sheets = mutableListOf<Pair<String,String>>()
         fun makeSheet(name:String, rows:List<List<String>>):Pair<String,String> {
             val xml=buildString { append("<?xml version=\"1.0\" encoding=\"UTF-8\"?><worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\"><sheetData>"); rows.forEachIndexed { ri,row -> append("<row r=\"${ri+1}\">"); row.forEachIndexed { ci,v -> append(cell(ci,ri+1,v)) }; append("</row>") }; append("</sheetData></worksheet>") }; return name to xml
         }
         if(scope=="all"||scope=="finance"){
-            val income=items.filter{it.income}.sumOf{it.amount}; val expense=items.filterNot{it.income}.sumOf{it.amount}
+            val income=exportItems.filter{it.income}.sumOf{it.amount}; val expense=exportItems.filterNot{it.income}.sumOf{it.amount}
             val cats=items.filterNot{it.income}.groupBy{FinanceAnalytics.categoryFor(it.title)}.mapValues{it.value.sumOf{m->m.amount}}.toList().sortedByDescending{it.second}
-            val dash=mutableListOf(listOf("DailySmart Dashboard"),listOf("Generated",java.time.LocalDate.now().toString()),listOf("Income MAD",income.toString()),listOf("Expenses MAD",expense.toString()),listOf("Net balance MAD",(income-expense).toString()),listOf("Transactions",items.size.toString()),listOf("Top category",cats.firstOrNull()?.first?:"—"),listOf("Category","Expenses MAD","Visual bar"))
+            val dash=mutableListOf(listOf("DailySmart Dashboard"),listOf("Generated",java.time.LocalDate.now().toString()),listOf("Income MAD",income.toString()),listOf("Expenses MAD",expense.toString()),listOf("Net balance MAD",(income-expense).toString()),listOf("Transactions",exportItems.size.toString()),listOf("Top category",cats.firstOrNull()?.first?:"—"),listOf("Category","Expenses MAD","Visual bar"))
             val maxCategory=cats.maxOfOrNull{it.second}?:0.0; cats.forEach{p->dash+=listOf(p.first,p.second.toString(),"█".repeat(if(maxCategory>0)(p.second/maxCategory*20).toInt().coerceAtLeast(1) else 0))}
             sheets+=makeSheet("Dashboard",dash)
-            sheets+=makeSheet("Finance",listOf(listOf("Type","Description","Amount MAD","Date","Category"))+items.map{listOf(if(it.income)"Income" else "Expense",it.title,it.amount.toString(),FinanceAnalytics.dateString(it.createdAt),if(it.income)"Income" else FinanceAnalytics.categoryFor(it.title))})
-            val monthly=items.filter{it.createdAt>0L}.groupBy{java.time.Instant.ofEpochMilli(it.createdAt).atZone(java.time.ZoneId.systemDefault()).toLocalDate().withDayOfMonth(1)}.toList().sortedBy{it.first}
+            sheets+=makeSheet("Finance",listOf(listOf("Type","Description","Amount MAD","Date","Category"))+exportItems.map{listOf(if(it.income)"Income" else "Expense",it.title,it.amount.toString(),FinanceAnalytics.dateString(it.createdAt),if(it.income)"Income" else FinanceAnalytics.categoryFor(it.title))})
+            val monthly=exportItems.filter{it.createdAt>0L}.groupBy{java.time.Instant.ofEpochMilli(it.createdAt).atZone(java.time.ZoneId.systemDefault()).toLocalDate().withDayOfMonth(1)}.toList().sortedBy{it.first}
             val monthlyTotals=monthly.map{m->Triple(m.first,m.second.filter{it.income}.sumOf{it.amount},m.second.filterNot{it.income}.sumOf{it.amount})}
             val maxMonthly=monthlyTotals.maxOfOrNull{it.third}?:0.0
             sheets+=makeSheet("Monthly",listOf(listOf("Month","Income MAD","Expenses MAD","Net MAD","Expense visual"))+monthlyTotals.map{m->listOf(m.first.toString(),m.second.toString(),m.third.toString(),(m.second-m.third).toString(),"█".repeat(if(maxMonthly>0)(m.third/maxMonthly*20).toInt().coerceAtLeast(1) else 0))})
