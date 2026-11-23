@@ -116,8 +116,14 @@ class LocalDatabase(context: Context) : SQLiteOpenHelper(
     }
 
     private fun insertMoney(db: SQLiteDatabase, items: List<MoneyItem>) {
+        // Validate the complete replacement set before deleting anything. Keep finite
+        // legacy values (including sub-cent, zero and negative rows) losslessly in SQLite;
+        // reporting/export layers decide separately which values count as transactions.
+        require(items.all { it.amount.isFinite() }) {
+            "Money data contains a non-finite amount; existing records were not changed."
+        }
         db.delete("money", null, null)
-        items.filter { it.amount.isFinite() && it.amount > 0.0 }.forEach { item ->
+        items.forEach { item ->
             val values = ContentValues().apply {
                 put("title", item.title)
                 put("amount", item.amount)
