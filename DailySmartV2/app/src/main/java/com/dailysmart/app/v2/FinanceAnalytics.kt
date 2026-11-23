@@ -26,11 +26,11 @@ object FinanceAnalytics {
         val weekStart = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
         val monthStart = today.withDayOfMonth(1)
         fun total(records: List<Pair<MoneyItem, LocalDate>>, income: Boolean) =
-            records.filter { it.first.income == income }.sumOf { it.first.amount }
+            records.filter { it.first.income == income && it.first.amount.isFinite() && it.first.amount >= 0.005 }.sumOf { it.first.amount }
         val thisWeek = dated.filter { !it.second.isBefore(weekStart) && !it.second.isAfter(today) }
         val thisMonth = dated.filter { !it.second.isBefore(monthStart) && !it.second.isAfter(today) }
         val categoryExpenses = thisMonth.asSequence()
-            .filter { !it.first.income }
+             .filter { !it.first.income && it.first.amount.isFinite() && it.first.amount >= 0.005 }
             .groupBy { categoryFor(it.first.title) }
             .mapValues { (_, values) -> values.sumOf { it.first.amount } }
             .entries
