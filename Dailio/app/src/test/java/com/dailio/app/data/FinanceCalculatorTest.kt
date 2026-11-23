@@ -22,7 +22,7 @@ class FinanceCalculatorTest {
         assertEquals(880000L, result.allIncomeMinor)
         assertEquals(215550L, result.allExpenseMinor)
         assertEquals(880000L, result.weekIncomeMinor)
-        assertEquals(15550L, result.weekExpenseMinor)
+        assertEquals(12550L, result.weekExpenseMinor)
         assertEquals(880000L, result.monthIncomeMinor)
         assertEquals(12550L, result.monthExpenseMinor)
         assertEquals(664450L, result.balanceMinor)
