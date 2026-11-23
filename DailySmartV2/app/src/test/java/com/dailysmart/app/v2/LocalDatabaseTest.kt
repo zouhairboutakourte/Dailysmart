@@ -46,7 +46,7 @@ class LocalDatabaseTest {
         database.migrateLegacyOnce(listOf(TaskItem("Replacement")), emptyList(), emptyList(), "2026-11-12")
 
         assertEquals(tasks, database.loadTasks())
-        assertEquals(listOf(MoneyItem("Salary", 8500.0, true, 0L)), database.loadMoney())
+        assertEquals(money.map { it.copy(createdAt = 0L) }, database.loadMoney())
     }
 
 
